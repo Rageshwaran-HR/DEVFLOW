@@ -9,6 +9,7 @@ import { GitHubClient } from "./github.js";
 import {
   buildReadmeSection,
   buildReport,
+  buildChangelog,
   updateReadme,
   writeReport,
 } from "./markdown.js";
@@ -381,37 +382,46 @@ export function createCli(rootPath = process.cwd()): Command {
     .option("--set-upstream", "Set upstream on first push")
     .option("--all", "Push all branches to remote")
     .action(
-      action(async (options: { setUpstream?: boolean; all?: boolean }, command: Command) => {
-        const git = new GitManager(rootPath);
-        if (options.all) {
-          const spinner = ora("Pushing all branches to remote GitHub...").start();
-          try {
-            const res = await git.pushAll();
-            spinner.stop();
-            output(res, json(command));
-            if (!json(command)) {
-              section("DevFlow GitHub Sync");
-              success(`Pushed ${res.pushedBranches.length} branches to GitHub remote`);
-              if (res.remoteUrl) info(`Remote: ${res.remoteUrl}`);
-              console.log(
-                res.pushedBranches
-                  .map((b) => `  ${chalk.cyan("•")} ${b}`)
-                  .join("\n"),
-              );
+      action(
+        async (
+          options: { setUpstream?: boolean; all?: boolean },
+          command: Command,
+        ) => {
+          const git = new GitManager(rootPath);
+          if (options.all) {
+            const spinner = ora(
+              "Pushing all branches to remote GitHub...",
+            ).start();
+            try {
+              const res = await git.pushAll();
+              spinner.stop();
+              output(res, json(command));
+              if (!json(command)) {
+                section("DevFlow GitHub Sync");
+                success(
+                  `Pushed ${res.pushedBranches.length} branches to GitHub remote`,
+                );
+                if (res.remoteUrl) info(`Remote: ${res.remoteUrl}`);
+                console.log(
+                  res.pushedBranches
+                    .map((b) => `  ${chalk.cyan("•")} ${b}`)
+                    .join("\n"),
+                );
+              }
+            } catch (err: unknown) {
+              spinner.stop();
+              const msg = err instanceof Error ? err.message : String(err);
+              throw new DevFlowError(`Failed to push all branches: ${msg}`);
             }
-          } catch (err: unknown) {
-            spinner.stop();
-            const msg = err instanceof Error ? err.message : String(err);
-            throw new DevFlowError(`Failed to push all branches: ${msg}`);
+            return;
           }
-          return;
-        }
-        const status = await git.status();
-        if (!status.isClean())
-          warning("Pushing a branch with a dirty working tree.");
-        await git.push(Boolean(options.setUpstream));
-        success("Branch pushed");
-      }),
+          const status = await git.status();
+          if (!status.isClean())
+            warning("Pushing a branch with a dirty working tree.");
+          await git.push(Boolean(options.setUpstream));
+          success("Branch pushed");
+        },
+      ),
     );
 
   gitCommand
@@ -427,7 +437,9 @@ export function createCli(rootPath = process.cwd()): Command {
           output(res, json(command));
           if (!json(command)) {
             section("DevFlow GitHub Sync");
-            success(`Pushed ${res.pushedBranches.length} branches to GitHub remote`);
+            success(
+              `Pushed ${res.pushedBranches.length} branches to GitHub remote`,
+            );
             if (res.remoteUrl) info(`Remote: ${res.remoteUrl}`);
             console.log(
               res.pushedBranches
@@ -1300,13 +1312,108 @@ export function createCli(rootPath = process.cwd()): Command {
     .action(
       action(async (options: { fix?: boolean }, command: Command) => {
         const checks = await runDoctor(rootPath, new GitManager(rootPath));
-        if (json(command)) return output(checks, true);
-        section("Repository Doctor");
-        console.log(formatDoctor(checks));
-        if (options.fix)
+        output(checks, json(command));
+        if (!json(command)) {
+          section("Repository Doctor");
+          console.log(formatDoctor(checks));
+          if (options.fix)
+            info(
+              "No files were overwritten. DevFlow only applies fixes it can prove are safe.",
+            );
+        }
+      }),
+    );
+
+  program
+    .command("next")
+    .description(
+      "AI-assisted workflow recommendation for what command to run next",
+    )
+    .action(
+      action(async (command: Command) => {
+        const state = requireState();
+        const git = await state.git.summary();
+        const tasks = state.db.listTasks();
+        state.db.close();
+
+        section("DevFlow AI Workflow Assistant");
+        if (!git.clean) {
           info(
-            "No files were overwritten. DevFlow only applies fixes it can prove are safe.",
+            `Detected ${git.modified + git.untracked + git.staged} uncommitted changes on branch '${git.branch}'.`,
           );
+          console.log(`\n💡 ${chalk.bold.green("Recommended Next Step:")}`);
+          console.log(
+            `   ${chalk.cyan('devflow commit --type feat --message "your commit description" --all')}`,
+          );
+          return;
+        }
+
+        const activeTask = tasks.find((t) => t.status === "IN_PROGRESS");
+        if (activeTask) {
+          info(
+            `Active task '${activeTask.id}: ${activeTask.title}' is currently IN_PROGRESS.`,
+          );
+          console.log(`\n💡 ${chalk.bold.green("Recommended Next Step:")}`);
+          console.log(
+            `   ${chalk.cyan(`devflow finish ${activeTask.id}`)} (or ${chalk.cyan(`devflow task complete ${activeTask.id}`)})`,
+          );
+          return;
+        }
+
+        const todoTask = tasks.find((t) => t.status === "TODO");
+        if (todoTask) {
+          info(
+            `Found open task '${todoTask.id}: ${todoTask.title}' in TODO state.`,
+          );
+          console.log(`\n💡 ${chalk.bold.green("Recommended Next Step:")}`);
+          console.log(`   ${chalk.cyan(`devflow start ${todoTask.id}`)}`);
+          return;
+        }
+
+        if (git.ahead > 0) {
+          info(
+            `Branch '${git.branch}' has ${git.ahead} local commit(s) not yet pushed.`,
+          );
+          console.log(`\n💡 ${chalk.bold.green("Recommended Next Step:")}`);
+          console.log(
+            `   ${chalk.cyan("devflow sync")} (or ${chalk.cyan("devflow git push")})`,
+          );
+          return;
+        }
+
+        success("All local tasks completed and repository is in sync!");
+        console.log(`\n💡 ${chalk.bold.green("Recommended Next Step:")}`);
+        console.log(
+          `   ${chalk.cyan('devflow task add "Your next feature title"')}`,
+        );
+      }),
+    );
+
+  program
+    .command("changelog")
+    .description("Generate an automated Conventional Commits changelog")
+    .option("-o, --output <path>", "Save to file (e.g. CHANGELOG.md)")
+    .action(
+      action(async (options: { output?: string }, command: Command) => {
+        const git = new GitManager(rootPath);
+        const logResult = await git.log(100);
+        const mapped = logResult.all.map((c) => ({
+          hash: c.hash,
+          message: c.message,
+          date: c.date,
+        }));
+        const content = buildChangelog(mapped);
+
+        if (options.output) {
+          const fileWritten = writeReport(options.output, content);
+          success(`Changelog written to ${fileWritten}`);
+        } else {
+          output(content, json(command));
+          if (!json(command)) {
+            section("Generated Changelog");
+            console.log(content);
+          }
+        }
       }),
     );
 
