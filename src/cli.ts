@@ -2,6 +2,7 @@ import { Command } from "commander";
 import chalk from "chalk";
 import ora from "ora";
 import { basename, resolve } from "node:path";
+import { AiAssistant } from "./ai.js";
 import { ConfigManager } from "./config.js";
 import { Database } from "./database.js";
 import { GitManager } from "./git.js";
@@ -1412,6 +1413,174 @@ export function createCli(rootPath = process.cwd()): Command {
           if (!json(command)) {
             section("Generated Changelog");
             console.log(content);
+          }
+        }
+      }),
+    );
+
+  const aiCommand = program
+    .command("ai")
+    .description("DevFlow AI Copilot Assistant & Workflow Intelligence");
+
+  aiCommand
+    .command("task <prompt>")
+    .description(
+      "Generate task title, description, priority, and labels using AI",
+    )
+    .action(
+      action(async (prompt: string, command: Command) => {
+        const spinner = ora("DevFlow AI generating task spec...").start();
+        const ai = new AiAssistant();
+        const spec = await ai.suggestTask(prompt);
+        spinner.stop();
+
+        const state = requireState();
+        const taskValue = state.db.addTask({
+          title: spec.title,
+          description: spec.description,
+          priority: spec.priority,
+          labels: spec.labels,
+          assignee: null,
+        });
+        state.db.close();
+
+        output({ spec, task: taskValue }, json(command));
+        if (!json(command)) {
+          section("DevFlow AI Task Generation");
+          success(`Created ${taskValue.id}: ${taskValue.title}`);
+          console.log(
+            `Priority: ${chalk.bold(taskValue.priority)} | Labels: ${taskValue.labels.join(", ")}`,
+          );
+          console.log(`\n${chalk.gray(taskValue.description)}`);
+        }
+      }),
+    );
+
+  aiCommand
+    .command("plan <goal>")
+    .description("Break down a high-level goal into structured AI subtasks")
+    .action(
+      action(async (goal: string, command: Command) => {
+        const spinner = ora(
+          "DevFlow AI architect planning feature breakdown...",
+        ).start();
+        const ai = new AiAssistant();
+        const tasksSpecs = await ai.planFeature(goal);
+        spinner.stop();
+
+        const state = requireState();
+        const created = tasksSpecs.map((spec) =>
+          state.db.addTask({
+            title: spec.title,
+            description: spec.description,
+            priority: spec.priority,
+            labels: spec.labels,
+            assignee: null,
+          }),
+        );
+        state.db.close();
+
+        output(created, json(command));
+        if (!json(command)) {
+          section("DevFlow AI Feature Breakdown");
+          success(`Generated ${created.length} task(s) for goal: "${goal}"`);
+          console.log(
+            created
+              .map(
+                (t) =>
+                  `  ${chalk.cyan("•")} ${chalk.bold(t.id)} [${t.priority}] ${t.title}`,
+              )
+              .join("\n"),
+          );
+        }
+      }),
+    );
+
+  aiCommand
+    .command("commit")
+    .description(
+      "Analyze staged changes and generate an AI conventional commit",
+    )
+    .option("-a, --all", "Stage all changes before generating commit")
+    .action(
+      action(async (options: { all?: boolean }, command: Command) => {
+        const git = new GitManager(rootPath);
+        if (options.all) await git.add(["."]);
+        const diff = await git.diff(true);
+        if (!diff) throw new DevFlowError("No staged changes found to commit.");
+
+        const spinner = ora(
+          "DevFlow AI analyzing diff and generating commit message...",
+        ).start();
+        const ai = new AiAssistant();
+        const spec = await ai.suggestCommitMessage(diff);
+        spinner.stop();
+
+        const scope = spec.scope ? `(${spec.scope})` : "";
+        const formattedMessage = `${spec.type}${scope}: ${spec.message}`;
+        const commitHash = await git.commit(formattedMessage);
+
+        output({ hash: commitHash, message: formattedMessage }, json(command));
+        if (!json(command)) {
+          success(
+            `Created AI commit ${commitHash.slice(0, 8)} ${formattedMessage}`,
+          );
+        }
+      }),
+    );
+
+  aiCommand
+    .command("audit")
+    .description(
+      "Run an AI audit on commit conventions, repository health, and velocity",
+    )
+    .action(
+      action(async (command: Command) => {
+        const spinner = ora(
+          "DevFlow AI auditing repository code quality...",
+        ).start();
+        const state = requireState();
+        const gitSummary = await state.git.summary();
+        const logResult = await state.git.log(50);
+        const tasks = state.db.listTasks();
+        state.db.close();
+
+        const ai = new AiAssistant();
+        const mappedCommits = logResult.all.map((c) => ({
+          hash: c.hash,
+          message: c.message,
+        }));
+        const audit = await ai.auditRepository(
+          gitSummary,
+          mappedCommits,
+          tasks,
+        );
+        spinner.stop();
+
+        output(audit, json(command));
+        if (!json(command)) {
+          section("DevFlow AI Repository Audit");
+          console.log(
+            `Score: ${chalk.bold.green(`${audit.score}/100`)} (${chalk.yellow(`Grade ${audit.grade}`)})`,
+          );
+          console.log(`\n${audit.summary}\n`);
+
+          if (audit.strengths.length > 0) {
+            console.log(chalk.bold.green("Strengths:"));
+            console.log(
+              audit.strengths
+                .map((s) => `  ${chalk.green("✓")} ${s}`)
+                .join("\n"),
+            );
+          }
+
+          if (audit.recommendations.length > 0) {
+            console.log(chalk.bold.yellow("\nAI Action Recommendations:"));
+            console.log(
+              audit.recommendations
+                .map((r) => `  ${chalk.cyan("💡")} ${r}`)
+                .join("\n"),
+            );
           }
         }
       }),
