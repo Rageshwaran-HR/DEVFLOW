@@ -135,3 +135,54 @@ export function updateReadme(
   writeFileSync(absolute, content, "utf8");
   return { path: absolute, created: !wasExisting };
 }
+
+export function buildChangelog(
+  commits: Array<{ hash: string; message: string; date: string }>,
+): string {
+  const groups: Record<string, string[]> = {
+    Features: [],
+    Fixes: [],
+    Documentation: [],
+    Refactoring: [],
+    Tests: [],
+    Chores: [],
+    Other: [],
+  };
+
+  for (const commit of commits) {
+    const match = commit.message.match(
+      /^(feat|fix|docs|refactor|test|chore)(?:\((.*?)\))?:\s*(.*)$/i,
+    );
+    const shortHash = commit.hash.slice(0, 7);
+    if (match) {
+      const type = match[1].toLowerCase();
+      const scope = match[2] ? `**${match[2]}**: ` : "";
+      const msg = `${scope}${match[3]} (\`${shortHash}\`)`;
+      if (type === "feat") groups.Features.push(msg);
+      else if (type === "fix") groups.Fixes.push(msg);
+      else if (type === "docs") groups.Documentation.push(msg);
+      else if (type === "refactor") groups.Refactoring.push(msg);
+      else if (type === "test") groups.Tests.push(msg);
+      else if (type === "chore") groups.Chores.push(msg);
+    } else {
+      groups.Other.push(`${commit.message} (\`${shortHash}\`)`);
+    }
+  }
+
+  const lines = [
+    "# Changelog",
+    "",
+    `Generated on ${new Date().toISOString().split("T")[0]}`,
+    "",
+  ];
+  for (const [title, items] of Object.entries(groups)) {
+    if (items.length > 0) {
+      lines.push(`## ${title}`, "");
+      for (const item of items) {
+        lines.push(`- ${item}`);
+      }
+      lines.push("");
+    }
+  }
+  return lines.join("\n");
+}
