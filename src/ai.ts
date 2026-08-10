@@ -7,11 +7,26 @@ interface AiTaskSuggestion {
   labels: string[];
 }
 
-interface AiAuditResult {
+export interface AiAuditIssue {
+  type:
+    | "COMMIT_CONVENTION"
+    | "DIRTY_FILE"
+    | "STALE_BRANCH"
+    | "UNRESOLVED_TASK"
+    | "DIVERGENCE";
+  location: string;
+  message: string;
+  recommendation: string;
+}
+
+export interface AiAuditResult {
   score: number;
   grade: string;
+  scope: "branch" | "repo";
+  target: string;
   summary: string;
   strengths: string[];
+  issues: AiAuditIssue[];
   recommendations: string[];
 }
 
@@ -156,54 +171,142 @@ export class AiAssistant {
     git: RepositorySummary,
     commits: Array<{ hash: string; message: string }>,
     tasks: Task[],
+    options?: {
+      branch?: string;
+      allBranches?: boolean;
+      allBranchList?: string[];
+      statusFiles?: string[];
+    },
   ): Promise<AiAuditResult> {
     let score = 100;
     const strengths: string[] = [];
+    const issues: AiAuditIssue[] = [];
     const recommendations: string[] = [];
 
+    const isRepoScope = options?.allBranches || false;
+    const targetName = options?.branch
+      ? `Branch '${options.branch}'`
+      : isRepoScope
+        ? `Whole Repository (${options?.allBranchList?.length ?? 1} local branches)`
+        : `Current Branch '${git.branch}'`;
+
+    // 1. Working tree cleanliness & exact dirty files
     if (git.clean) {
       strengths.push("Working tree is completely clean");
     } else {
       score -= 15;
+      const count = git.modified + git.untracked + git.staged;
       recommendations.push(
-        `Stage and commit ${git.modified + git.untracked} uncommitted files using \`devflow commit\``,
+        `Stage and commit ${count} uncommitted file(s) using \`devflow commit --all\``,
       );
+
+      if (options?.statusFiles && options.statusFiles.length > 0) {
+        for (const file of options.statusFiles.slice(0, 5)) {
+          issues.push({
+            type: "DIRTY_FILE",
+            location: `file://${file}`,
+            message: `Uncommitted modifications in ${file}`,
+            recommendation: `Run \`devflow commit --all\` or \`devflow stash save\``,
+          });
+        }
+      } else {
+        issues.push({
+          type: "DIRTY_FILE",
+          location: `branch:${git.branch}`,
+          message: `${count} modified/untracked file(s) pending in working tree`,
+          recommendation: `Run \`devflow commit --all\``,
+        });
+      }
     }
 
-    const conventionalCount = commits.filter((c) =>
-      /^(feat|fix|docs|refactor|test|chore)(\(.*\))?:/.test(c.message),
-    ).length;
+    // 2. Commit convention ratio & exact failing commit hashes
+    const conventionalRegex =
+      /^(feat|fix|docs|style|refactor|test|chore|perf|ci|build)(\(.*\))?!?: .+/i;
+    const failingCommits = commits.filter(
+      (c) => !conventionalRegex.test(c.message),
+    );
+    const conventionalCount = commits.length - failingCommits.length;
     const conventionalRatio = commits.length
       ? conventionalCount / commits.length
       : 1;
 
-    if (conventionalRatio >= 0.8) {
+    if (conventionalRatio >= 0.85) {
       strengths.push(
-        `Excellent Conventional Commit ratio (${Math.round(conventionalRatio * 100)}%)`,
+        `High Conventional Commit compliance (${Math.round(conventionalRatio * 100)}%)`,
       );
     } else {
       score -= 20;
       recommendations.push(
         `Improve commit quality: only ${Math.round(conventionalRatio * 100)}% of recent commits follow Conventional Commits standard`,
       );
+
+      for (const commit of failingCommits.slice(0, 5)) {
+        issues.push({
+          type: "COMMIT_CONVENTION",
+          location: `commit:${commit.hash.slice(0, 7)}`,
+          message: `Non-conventional commit message: "${commit.message}"`,
+          recommendation: `Use conventional commit format: \`feat(scope): description\``,
+        });
+      }
     }
 
+    // 3. Multi-branch stale & topology audit
+    if (isRepoScope && options?.allBranchList) {
+      const featureBranches = options.allBranchList.filter(
+        (b) => b !== "main" && b !== "master" && b !== "dev" && b !== "qual",
+      );
+      if (featureBranches.length > 0) {
+        strengths.push(
+          `Tracking ${featureBranches.length} active feature branch(es)`,
+        );
+        for (const fb of featureBranches.slice(0, 5)) {
+          issues.push({
+            type: "STALE_BRANCH",
+            location: `branch:${fb}`,
+            message: `Feature branch '${fb}' is unmerged`,
+            recommendation: `Merge branch '${fb}' into dev/qual or run \`devflow branch cleanup\``,
+          });
+        }
+      }
+    }
+
+    // 4. Task completion velocity & open task locations
     const completedTasks = tasks.filter(
       (t) => t.status === "COMPLETED" || t.status === "CLOSED",
     );
+    const openTasks = tasks.filter(
+      (t) => !["COMPLETED", "CLOSED"].includes(t.status),
+    );
+
     if (tasks.length > 0 && completedTasks.length / tasks.length >= 0.7) {
       strengths.push(
         `High task completion velocity (${completedTasks.length}/${tasks.length} tasks completed)`,
       );
-    } else if (tasks.length > 0) {
+    } else if (openTasks.length > 0) {
       score -= 10;
       recommendations.push(
-        `Resolve ${tasks.length - completedTasks.length} open tasks using \`devflow finish <id>\``,
+        `Resolve ${openTasks.length} open task(s) using \`devflow finish <id>\``,
       );
+
+      for (const task of openTasks.slice(0, 5)) {
+        issues.push({
+          type: "UNRESOLVED_TASK",
+          location: `task:${task.id}`,
+          message: `Task ${task.id} (${task.title}) is in state ${task.status}`,
+          recommendation: `Start work with \`devflow start ${task.id}\` or complete with \`devflow finish ${task.id}\``,
+        });
+      }
     }
 
-    if (git.ahead > 0) {
+    // 5. Remote divergence check
+    if (git.ahead > 0 || git.behind > 0) {
       score -= 10;
+      issues.push({
+        type: "DIVERGENCE",
+        location: `branch:${git.branch}`,
+        message: `Branch '${git.branch}' is ${git.ahead} ahead and ${git.behind} behind remote origin`,
+        recommendation: `Sync changes with \`devflow sync\` or \`devflow git push\``,
+      });
       recommendations.push(
         `Local branch is ${git.ahead} commit(s) ahead of remote. Sync changes with \`devflow sync\``,
       );
@@ -226,8 +329,11 @@ export class AiAssistant {
     return {
       score,
       grade,
-      summary: `DevFlow AI Quality Audit Score: ${score}/100 (Grade ${grade}). Evaluated ${commits.length} commits and ${tasks.length} tasks.`,
+      scope: isRepoScope ? "repo" : "branch",
+      target: targetName,
+      summary: `DevFlow AI Audit for ${targetName}: Score ${score}/100 (Grade ${grade}). Evaluated ${commits.length} commit(s), ${issues.length} issue(s) flagged.`,
       strengths,
+      issues,
       recommendations,
     };
   }

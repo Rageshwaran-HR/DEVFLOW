@@ -383,37 +383,46 @@ export function createCli(rootPath = process.cwd()): Command {
     .option("--set-upstream", "Set upstream on first push")
     .option("--all", "Push all branches to remote")
     .action(
-      action(async (options: { setUpstream?: boolean; all?: boolean }, command: Command) => {
-        const git = new GitManager(rootPath);
-        if (options.all) {
-          const spinner = ora("Pushing all branches to remote GitHub...").start();
-          try {
-            const res = await git.pushAll();
-            spinner.stop();
-            output(res, json(command));
-            if (!json(command)) {
-              section("DevFlow GitHub Sync");
-              success(`Pushed ${res.pushedBranches.length} branches to GitHub remote`);
-              if (res.remoteUrl) info(`Remote: ${res.remoteUrl}`);
-              console.log(
-                res.pushedBranches
-                  .map((b) => `  ${chalk.cyan("•")} ${b}`)
-                  .join("\n"),
-              );
+      action(
+        async (
+          options: { setUpstream?: boolean; all?: boolean },
+          command: Command,
+        ) => {
+          const git = new GitManager(rootPath);
+          if (options.all) {
+            const spinner = ora(
+              "Pushing all branches to remote GitHub...",
+            ).start();
+            try {
+              const res = await git.pushAll();
+              spinner.stop();
+              output(res, json(command));
+              if (!json(command)) {
+                section("DevFlow GitHub Sync");
+                success(
+                  `Pushed ${res.pushedBranches.length} branches to GitHub remote`,
+                );
+                if (res.remoteUrl) info(`Remote: ${res.remoteUrl}`);
+                console.log(
+                  res.pushedBranches
+                    .map((b) => `  ${chalk.cyan("•")} ${b}`)
+                    .join("\n"),
+                );
+              }
+            } catch (err: unknown) {
+              spinner.stop();
+              const msg = err instanceof Error ? err.message : String(err);
+              throw new DevFlowError(`Failed to push all branches: ${msg}`);
             }
-          } catch (err: unknown) {
-            spinner.stop();
-            const msg = err instanceof Error ? err.message : String(err);
-            throw new DevFlowError(`Failed to push all branches: ${msg}`);
+            return;
           }
-          return;
-        }
-        const status = await git.status();
-        if (!status.isClean())
-          warning("Pushing a branch with a dirty working tree.");
-        await git.push(Boolean(options.setUpstream));
-        success("Branch pushed");
-      }),
+          const status = await git.status();
+          if (!status.isClean())
+            warning("Pushing a branch with a dirty working tree.");
+          await git.push(Boolean(options.setUpstream));
+          success("Branch pushed");
+        },
+      ),
     );
 
   gitCommand
@@ -429,7 +438,9 @@ export function createCli(rootPath = process.cwd()): Command {
           output(res, json(command));
           if (!json(command)) {
             section("DevFlow GitHub Sync");
-            success(`Pushed ${res.pushedBranches.length} branches to GitHub remote`);
+            success(
+              `Pushed ${res.pushedBranches.length} branches to GitHub remote`,
+            );
             if (res.remoteUrl) info(`Remote: ${res.remoteUrl}`);
             console.log(
               res.pushedBranches
@@ -640,7 +651,9 @@ export function createCli(rootPath = process.cwd()): Command {
           commitType = commitType || aiSuggestion.type;
           commitScope = commitScope || aiSuggestion.scope;
           commitMsg = commitMsg || aiSuggestion.message;
-          info(`AI generated commit spec: ${commitType}${commitScope ? `(${commitScope})` : ""}: ${commitMsg}`);
+          info(
+            `AI generated commit spec: ${commitType}${commitScope ? `(${commitScope})` : ""}: ${commitMsg}`,
+          );
         }
 
         const allowed = [
@@ -1328,7 +1341,9 @@ export function createCli(rootPath = process.cwd()): Command {
 
   program
     .command("next")
-    .description("AI-assisted workflow recommendation for what command to run next")
+    .description(
+      "AI-assisted workflow recommendation for what command to run next",
+    )
     .action(
       action(async (command: Command) => {
         const state = requireState();
@@ -1429,7 +1444,9 @@ export function createCli(rootPath = process.cwd()): Command {
 
   aiCommand
     .command("task <prompt>")
-    .description("Generate task title, description, priority, and labels using AI")
+    .description(
+      "Generate task title, description, priority, and labels using AI",
+    )
     .action(
       action(async (prompt: string, command: Command) => {
         const spinner = ora("DevFlow AI generating task spec...").start();
@@ -1501,7 +1518,9 @@ export function createCli(rootPath = process.cwd()): Command {
 
   aiCommand
     .command("commit")
-    .description("Analyze staged changes and generate an AI conventional commit")
+    .description(
+      "Analyze staged changes and generate an AI conventional commit",
+    )
     .option("-a, --all", "Stage all changes before generating commit")
     .action(
       action(async (options: { all?: boolean }, command: Command) => {
@@ -1535,54 +1554,90 @@ export function createCli(rootPath = process.cwd()): Command {
     .description(
       "Run an AI audit on commit conventions, repository health, and velocity",
     )
+    .option("-b, --branch <branchName>", "Audit a specific branch")
+    .option("-r, --repo", "Audit all branches in the entire repository")
     .action(
-      action(async (command: Command) => {
-        const spinner = ora(
-          "DevFlow AI auditing repository code quality...",
-        ).start();
-        const state = requireState();
-        const gitSummary = await state.git.summary();
-        const logResult = await state.git.log(50);
-        const tasks = state.db.listTasks();
-        state.db.close();
+      action(
+        async (
+          options: { branch?: string; repo?: boolean },
+          command: Command,
+        ) => {
+          const spinner = ora(
+            "DevFlow AI auditing code quality & risks...",
+          ).start();
+          const state = requireState();
+          const gitManager = state.git;
+          const gitSummary = await gitManager.summary();
+          const branchesResult = await gitManager.branches();
+          const statusResult = await gitManager.status();
+          const logResult = await gitManager.log(100);
+          const tasks = state.db.listTasks();
+          state.db.close();
 
-        const ai = new AiAssistant();
-        const mappedCommits = logResult.all.map((c) => ({
-          hash: c.hash,
-          message: c.message,
-        }));
-        const audit = await ai.auditRepository(
-          gitSummary,
-          mappedCommits,
-          tasks,
-        );
-        spinner.stop();
+          const targetBranch = options.branch || gitSummary.branch;
+          const statusFiles = statusResult.files.map((f) => f.path);
 
-        output(audit, json(command));
-        if (!json(command)) {
-          section("DevFlow AI Repository Audit");
-          console.log(
-            `Score: ${chalk.bold.green(`${audit.score}/100`)} (${chalk.yellow(`Grade ${audit.grade}`)})`,
+          const ai = new AiAssistant();
+          const mappedCommits = logResult.all.map((c) => ({
+            hash: c.hash,
+            message: c.message,
+          }));
+
+          const audit = await ai.auditRepository(
+            gitSummary,
+            mappedCommits,
+            tasks,
+            {
+              branch: options.branch,
+              allBranches: Boolean(options.repo),
+              allBranchList: branchesResult.all,
+              statusFiles,
+            },
           );
-          console.log(`\n${audit.summary}\n`);
+          spinner.stop();
 
-          if (audit.strengths.length > 0) {
-            console.log(chalk.bold.green("Strengths:"));
+          output(audit, json(command));
+          if (!json(command)) {
+            section(`DevFlow AI Quality & Risk Audit [${audit.target}]`);
             console.log(
-              audit.strengths.map((s) => `  ${chalk.green("✓")} ${s}`).join("\n"),
+              `Score: ${chalk.bold.green(`${audit.score}/100`)} (${chalk.yellow(`Grade ${audit.grade}`)}) | Target: ${chalk.cyan(audit.target)}`,
             );
-          }
+            console.log(`\n${audit.summary}\n`);
 
-          if (audit.recommendations.length > 0) {
-            console.log(chalk.bold.yellow("\nAI Action Recommendations:"));
-            console.log(
-              audit.recommendations
-                .map((r) => `  ${chalk.cyan("💡")} ${r}`)
-                .join("\n"),
-            );
+            if (audit.issues.length > 0) {
+              console.log(
+                chalk.bold.red(
+                  "Identified Failure / Problem Locations & Risks:",
+                ),
+              );
+              for (const issue of audit.issues) {
+                console.log(
+                  `  ${chalk.red("✖")} ${chalk.bold(issue.location)}: ${issue.message}\n    └─ ${chalk.yellow("Fix:")} ${issue.recommendation}`,
+                );
+              }
+              console.log("");
+            }
+
+            if (audit.strengths.length > 0) {
+              console.log(chalk.bold.green("Strengths:"));
+              console.log(
+                audit.strengths
+                  .map((s) => `  ${chalk.green("✓")} ${s}`)
+                  .join("\n"),
+              );
+            }
+
+            if (audit.recommendations.length > 0) {
+              console.log(chalk.bold.yellow("\nAI Action Recommendations:"));
+              console.log(
+                audit.recommendations
+                  .map((r) => `  ${chalk.cyan("💡")} ${r}`)
+                  .join("\n"),
+              );
+            }
           }
-        }
-      }),
+        },
+      ),
     );
 
   return program;
