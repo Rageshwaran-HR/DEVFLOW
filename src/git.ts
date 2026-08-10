@@ -164,7 +164,10 @@ export class GitManager {
   async fetch(): Promise<void> {
     await this.git.fetch();
   }
-  async pushAll(): Promise<{ pushedBranches: string[]; remoteUrl: string | null }> {
+  async pushAll(): Promise<{
+    pushedBranches: string[];
+    remoteUrl: string | null;
+  }> {
     const remote = await this.remote();
     const branches = await this.branches();
     await this.git.push(["--all", "origin"]);

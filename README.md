@@ -2,14 +2,13 @@
 
 # ⚡ DevFlow
 
-### **Developer Workflow Command Center**
+### **Next-Gen Developer Workflow Command Center**
 
-_A local-first, production-oriented CLI orchestrating the entire lifecycle from local task creation to Git branches, conventional commits, GitHub Pull Requests, live CI/review checks, and automated development reports._
+_A local-first CLI orchestrating the entire lifecycle from local task creation to Git branches, conventional commits, GitHub Pull Requests, live CI/review checks, AI workflow recommendations, and automated changelogs._
 
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen.svg?style=for-the-badge&logo=node.js)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 [![Database](https://img.shields.io/badge/Database-SQLite-003B57.svg?style=for-the-badge&logo=sqlite)](https://sqlite.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
 [![Build Status](https://img.shields.io/badge/Build-Passing-success.svg?style=for-the-badge)](<>)
 
 ---
@@ -21,17 +20,58 @@ _A local-first, production-oriented CLI orchestrating the entire lifecycle from 
 
 ---
 
-## ✨ Features at a Glance
+## 🌟 What Makes DevFlow Stand Out?
 
-| Feature                         | Description                                                                                  |
-| :------------------------------ | :------------------------------------------------------------------------------------------- |
-| 💾 **SQLite Local Persistence** | Built-in SQLite database engine for zero-overhead local task state tracking.                 |
-| 🔄 **Safe Task Lifecycle**      | Enforces structured state transitions (`TODO` → `IN_PROGRESS` → `IN_REVIEW` → `COMPLETED`).  |
-| 🌿 **Branch Automation**        | Automates branch creation (`feature/TASK-001-...`), switching, and post-merge cleanup.       |
-| 📝 **Conventional Commits**     | Enforces conventional commit standards (`feat`, `fix`, `docs`, `refactor`, `test`, `chore`). |
-| 🐙 **GitHub & CI Integration**  | Syncs with GitHub Issues, Pull Requests, live CI checks, and review approvals.               |
-| 🩺 **Repository Health Doctor** | Diagnoses branch divergence, uncommitted changes, and project configuration health.          |
-| 📊 **Development Reports**      | Generates standalone Markdown reports and updates marked README sections safely.             |
+DevFlow goes far beyond standard Git wrappers. It is designed to be the ultimate terminal developer companion:
+
+| Standout Feature                                         | Why It Beats Other Tools                                                                               |
+| :------------------------------------------------------- | :----------------------------------------------------------------------------------------------------- |
+| 🤖 **AI Workflow Assistant (`devflow next`)**            | Analyzes your current git tree, active tasks, and commits to tell you _the exact command to run next_. |
+| 📑 **Automated Changelog Engine (`devflow changelog`)**  | Parses Conventional Commits and generates clean `CHANGELOG.md` releases grouped by scope.              |
+| 🔄 **1-Click Multi-Branch GitHub Sync (`devflow sync`)** | Pushes all local feature, dev, qual, and main branches cleanly with a live terminal spinner.           |
+| 💾 **Built-in SQLite Persistence**                       | Tracks tasks locally with zero subscription costs or cloud lock-in (`.devflow/devflow.db`).            |
+| 🌿 **Automated Task-to-Branch Flow (`devflow start`)**   | Creates feature branches, checks them out, and updates task state in a single step.                    |
+| 🩺 **Repository Doctor (`devflow doctor`)**              | Automatically audits repository health, branch divergence, uncommitted changes, and configs.           |
+| 📦 **Stash Management (`devflow stash`)**                | Clean, formatted terminal interface for saving, listing, popping, and dropping stashes.                |
+
+---
+
+## 🔑 Environment & GitHub API Setup
+
+GitHub integration is optional. When needed for Issues, Pull Requests, and CI checks, configure your GitHub Personal Access Token (`DEVFLOW_GITHUB_TOKEN`).
+
+### Step-by-Step: How to Get Your GitHub Access Token
+
+1. Log in to [GitHub.com](https://github.com).
+2. Click your profile picture in the top-right → **Settings**.
+3. Scroll down the left sidebar and click **Developer settings**.
+4. Select **Personal access tokens** → **Tokens (classic)** (or Fine-grained tokens).
+5. Click **Generate new token (classic)**.
+6. Give it a descriptive Note (e.g. `DevFlow CLI Token`).
+7. Select the following permissions:
+   - ✅ **`repo`** (Full control of private repositories)
+   - ✅ **`workflow`** (Update GitHub Action workflows)
+8. Click **Generate token** and copy the generated token (`ghp_...`).
+
+### How to Set the Environment Variable
+
+#### In Windows PowerShell:
+
+```powershell
+$env:DEVFLOW_GITHUB_TOKEN="ghp_your_copied_token_here"
+```
+
+#### In macOS / Linux Bash or Zsh:
+
+```bash
+export DEVFLOW_GITHUB_TOKEN="ghp_your_copied_token_here"
+```
+
+#### Verification:
+
+```bash
+devflow auth status
+```
 
 ---
 
@@ -42,271 +82,289 @@ _A local-first, production-oriented CLI orchestrating the entire lifecycle from 
 - **Node.js**: `v20.0.0` or newer
 - **npm**: `v10.0.0` or newer
 
-### 1. Clone & Install Dependencies
-
 ```bash
-# Clone repository
-git clone https://github.com/your-username/devflow.git
-cd devflow
+# 1. Clone repository
+git clone https://github.com/Rageshwaran-HR/DEVFLOW.git
+cd DEVFLOW
 
-# Install dependencies using npm
+# 2. Install dependencies
 npm install
-```
 
-### 2. Build the CLI
-
-```bash
-# Compile TypeScript to dist/
+# 3. Build TypeScript CLI
 npm run devflow:build
-```
 
-### 3. (Optional) Link Globally for Direct Terminal Access
-
-To run `devflow` from any directory across your terminal, run `npm link`:
-
-```bash
+# 4. Link CLI globally (run 'devflow' from anywhere!)
 npm link
 ```
 
-_Now you can run `devflow` directly from any project folder!_
+---
+
+## 🎮 Complete Command Guide & Sample Outputs
 
 ---
 
-## 🎮 Feature Guide & Commands
+### 1. 🤖 AI Workflow Next-Step Assistant (`devflow next`)
 
-> [!TIP]
-> All commands can be run either using the global command (`devflow <command>`) or using npm scripts (`npm run devflow -- <command>`).
-
-### 1. Initialize a Project & Health Check
-
-Run `init` inside any repository you want DevFlow to manage:
+_Analyzes your git tree and database state to recommend your next command._
 
 ```bash
-# Initialize DevFlow in the current repository
-npm run devflow -- init
+npm run devflow -- next
+# Or: devflow next
+```
 
-# Automatically initialize Git & DevFlow if Git is not already created
+<details>
+<summary><b>📸 View Sample Terminal Output</b></summary>
+
+```text
+DevFlow AI Workflow Assistant
+─────────────────────────────────────
+ℹ Detected 2 uncommitted changes on branch 'feature/TASK-001'.
+
+💡 Recommended Next Step:
+   devflow commit --type feat --message "add user login endpoint" --all
+```
+
+</details>
+
+---
+
+### 2. 📑 Automated Changelog Generator (`devflow changelog`)
+
+_Parses Conventional Commits and builds a grouped Markdown changelog._
+
+```bash
+# Output changelog to terminal
+npm run devflow -- changelog
+
+# Save directly to CHANGELOG.md
+npm run devflow -- changelog --output CHANGELOG.md
+```
+
+<details>
+<summary><b>📸 View Sample Terminal Output</b></summary>
+
+```text
+# Changelog
+
+Generated on 2026-08-11
+
+## Features
+
+- **auth**: add login API endpoint (`7866791`)
+- **ui**: add dark mode toggle (`5a29126`)
+
+## Documentation
+
+- **docs**: update API command reference (`c2ae519`)
+```
+
+</details>
+
+---
+
+### 3. 🚀 1-Click GitHub Multi-Branch Sync (`devflow sync`)
+
+_Pushes all branches (`main`, `qual`, `dev`, `feature/*`) cleanly to GitHub._
+
+```bash
+npm run devflow -- sync
+# Or: devflow sync
+```
+
+<details>
+<summary><b>📸 View Sample Terminal Output</b></summary>
+
+```text
+DevFlow GitHub Sync
+───────────────────────────
+✓ Pushed 14 branches to GitHub remote
+ℹ Remote: https://github.com/Rageshwaran-HR/DEVFLOW.git
+  • dev
+  • feature/TASK-001-phase-1-project-setup
+  • feature/TASK-002-phase-2-task-management
+  • main
+  • qual
+```
+
+</details>
+
+---
+
+### 4. 🚀 Project Initialization & Health Doctor (`devflow doctor`)
+
+_Audits project configuration, Git health, and uncommitted files._
+
+```bash
+# Initialize DevFlow in current repo
 npm run devflow -- init --yes
 
-# Run a repository health diagnostic check
+# Run health diagnostics
 npm run devflow -- doctor
-
-# Automatically fix repairable health issues
-npm run devflow -- doctor --fix
 ```
+
+<details>
+<summary><b>📸 View Sample Terminal Output</b></summary>
+
+```text
+Repository Doctor
+─────────────────────────
+✓ Git repository           Repository detected
+✓ Remote                   https://github.com/Rageshwaran-HR/DEVFLOW.git
+✓ Current branch           main
+✓ README                   README.md present
+✓ .gitignore               .gitignore present
+✓ TypeScript configuration tsconfig.json present
+```
+
+</details>
 
 ---
 
-### 2. Task Lifecycle Management
+### 5. 📝 Local Task Lifecycle Management (`devflow task`)
 
-Manage developer tasks locally without third-party subscriptions:
+_Manage tasks locally stored in `.devflow/devflow.db`._
 
 ```bash
-# Create a new task
-npm run devflow -- task add "Implement user authentication" --priority high --labels auth,api
+# Create a task
+npm run devflow -- task add "Add rate limiting middleware" --priority high
 
-# List all tasks in local database
+# List tasks
 npm run devflow -- task list
 
-# Filter tasks by status (TODO, IN_PROGRESS, COMPLETED, CLOSED)
-npm run devflow -- task list --status TODO
-
-# Show full details of a specific task
+# Show task details
 npm run devflow -- task show TASK-001
-
-# Manually complete or reopen a task
-npm run devflow -- task complete TASK-001
-npm run devflow -- task reopen TASK-001
-
-# Delete a task safely
-npm run devflow -- task delete TASK-001 --yes
 ```
+
+<details>
+<summary><b>📸 View Sample Terminal Output</b></summary>
+
+```text
+Task Overview
+─────────────────────────
+ID          TASK-001
+Status      IN_PROGRESS
+Priority    HIGH
+Title       Add rate limiting middleware
+Branch      feature/TASK-001-add-rate-limiting-middleware
+Created     2026-08-11T00:15:00.000Z
+```
+
+</details>
 
 ---
 
-### 3. Task-to-Branch Automation
+### 6. 🌿 Task-to-Branch Automation (`devflow start`)
 
-Start working on a task with automatic branch creation:
+_Creates a feature branch and updates task status in a single step._
 
 ```bash
-# Automatically create feature branch (e.g. feature/TASK-001-implement-user-authentication),
-# switch to it, and move task status to IN_PROGRESS
 npm run devflow -- start TASK-001
-
-# List all branches and associated tasks
-npm run devflow -- branch list
-
-# View active branch & current task association
-npm run devflow -- branch show
-
-# Clean up merged local feature branches safely
-npm run devflow -- branch cleanup --yes
 ```
+
+<details>
+<summary><b>📸 View Sample Terminal Output</b></summary>
+
+```text
+✓ TASK-001 started on feature/TASK-001-add-rate-limiting-middleware
+```
+
+</details>
 
 ---
 
-### 4. Conventional Commits, Git Control & Stashing
+### 7. 📦 Conventional Commits & Stashes (`devflow commit` & `devflow stash`)
 
-Enforce clean commit messages and manage local stashes cleanly:
+_Enforce clean commit messages and manage local stashes._
 
 ```bash
-# Check working tree status
-npm run devflow -- git status
+# Conventional Commit
+npm run devflow -- commit --type feat --scope api --message "add rate limiter" --all
 
-# View current code diff
-npm run devflow -- git diff
+# Save Stash
+npm run devflow -- stash save "WIP rate limiter"
 
-# Commit changes using Conventional Commits standard
-npm run devflow -- commit --type feat --scope auth --message "add login API endpoint" --all
-
-# Safely merge a branch with clean conflict reports
-npm run devflow -- git merge feature/login
-
-# Push changes (current branch or all branches) to remote repository
-npm run devflow -- git push --set-upstream
-npm run devflow -- git push --all
-
-# Sync all branches to remote GitHub cleanly
-npm run devflow -- sync
-
-# Manage Git stashes cleanly
-npm run devflow -- stash save "WIP feature login"
+# List Stashes
 npm run devflow -- stash list
+
+# Pop Stash
 npm run devflow -- stash pop
-npm run devflow -- stash apply
-npm run devflow -- stash drop
-
-# Pull & fetch updates
-npm run devflow -- git pull
-npm run devflow -- git fetch
 ```
+
+<details>
+<summary><b>📸 View Sample Terminal Output</b></summary>
+
+```text
+✓ Created commit 3d4fda84 feat(api): add rate limiter
+
+Git Stashes
+─────────────────────────
+  stash@{0} WIP rate limiter
+```
+
+</details>
 
 ---
 
-### 5. GitHub Issues & Pull Requests
+### 8. 📊 Live Interactive Dashboard (`devflow dashboard`)
 
-Configure your GitHub environment token to enable live sync:
-
-```bash
-# Set your environment variable (PowerShell)
-$env:DEVFLOW_GITHUB_TOKEN="ghp_your_personal_access_token"
-
-# Or on Linux / macOS:
-export DEVFLOW_GITHUB_TOKEN="ghp_your_personal_access_token"
-
-# Verify authentication status
-npm run devflow -- auth status
-
-# GitHub Issues
-npm run devflow -- issue list
-npm run devflow -- issue create --task TASK-001
-npm run devflow -- issue link TASK-001 42
-
-# GitHub Pull Requests
-npm run devflow -- pr create --task TASK-001
-npm run devflow -- pr list
-npm run devflow -- pr show 42
-npm run devflow -- pr approve 42
-
-# Inspect PR readiness (verifies passing CI, approval count, mergeability)
-npm run devflow -- review check 42
-
-# Merge Pull Request safely
-npm run devflow -- pr merge 42 --yes --method squash
-```
-
----
-
-### 6. End-to-End Task Completion (`finish`)
-
-Complete tasks with workflow safety checks:
+_Renders a live terminal project overview._
 
 ```bash
-# Validate working tree, branch commits, and linked PR before completing task
-npm run devflow -- finish TASK-001
-
-# Validate, merge PR, delete local branch, and complete task in one step
-npm run devflow -- finish TASK-001 --merge --yes
-```
-
----
-
-### 7. Interactive Dashboard & Development Reports
-
-```bash
-# View live project dashboard
 npm run devflow -- dashboard
-
-# Display task & Git status
-npm run devflow -- status
-
-# Generate a Markdown development report
-npm run devflow -- report --output reports/devflow-report.md
-
-# Update marked README section safely (manages <!-- devflow:start --> ... <!-- devflow:end -->)
-npm run devflow -- readme
 ```
 
----
+<details>
+<summary><b>📸 View Sample Terminal Output</b></summary>
 
-### 8. Workflow Strategy & Configuration
+```text
+DevFlow Dashboard
+─────────────────────────
+Project       DEVFLOW
+Workflow      trunk
+Branch        main
+Git           clean
+Open tasks    1
+Review queue  0
 
-```bash
-# Switch workflow strategy (trunk vs gitflow)
-npm run devflow -- workflow set trunk
-npm run devflow -- workflow set gitflow
-
-# List configuration settings
-npm run devflow -- config list
-
-# Set custom configuration parameters
-npm run devflow -- config set branch.prefix feature
-npm run devflow -- config set workflow.autoMerge false
+Recent tasks
+TASK-001   IN_PROGRESS  Add rate limiting middleware
 ```
+
+</details>
 
 ---
 
 ## 🏗️ Architecture & Project Structure
 
-DevFlow is designed with strict domain separation and modularity:
-
 ```
 DevFlow/
 ├── src/
-│   ├── cli.ts        # Commander CLI registration & command orchestration
-│   ├── database.ts   # SQLite schema, persistence, & task repositories
-│   ├── git.ts        # Safe Git workflow adapter (simple-git)
-│   ├── github.ts     # GitHub API adapter (Octokit)
+│   ├── cli.ts        # Commander CLI registration & AI assistant orchestration
+│   ├── database.ts   # SQLite schema & task persistence repository
+│   ├── git.ts        # Safe Git workflow & stash adapter
+│   ├── github.ts     # Octokit GitHub API integration
 │   ├── config.ts     # Configuration validation engine
-│   ├── doctor.ts     # Health diagnostics check engine
-│   ├── markdown.ts   # Markdown report & README generator
-│   ├── types.ts      # Domain models & TypeScript definitions
-│   └── utils.ts      # Shared UI, formatting, & safety helpers
-└── tests/            # Vitest unit & integration test suite
+│   ├── doctor.ts     # Repository health diagnostics engine
+│   ├── markdown.ts   # Markdown report & changelog generator
+│   ├── types.ts      # TypeScript interfaces & domain types
+│   └── utils.ts      # Shared UI formatting & safety helpers
+└── tests/            # Vitest unit test suite (11/11 tests pass)
 ```
 
 ---
 
-## 🧪 Development & Quality Scripts
-
-All development operations use standard `npm` scripts:
+## 🧪 Development & Quality Commands
 
 ```bash
-# Compile TypeScript CLI
+# Build TypeScript CLI
 npm run devflow:build
 
-# Run Unit Tests (Vitest)
+# Run Vitest Unit Tests
 npm run devflow:test
 
-# Run ESLint check
+# Run ESLint Check
 npm run devflow:lint
 
-# Run Prettier code formatter
+# Format Codebase with Prettier
 npm run devflow:format
 ```
-
----
-
-## 📜 License
-
-Distributed under the **MIT License**. See `LICENSE` for more information.
