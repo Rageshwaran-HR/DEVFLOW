@@ -11,6 +11,7 @@ import {
   buildReadmeSection,
   buildReport,
   buildChangelog,
+  buildAiAuditReport,
   updateReadme,
   writeReport,
 } from "./markdown.js";
@@ -1556,10 +1557,14 @@ export function createCli(rootPath = process.cwd()): Command {
     )
     .option("-b, --branch <branchName>", "Audit a specific branch")
     .option("-r, --repo", "Audit all branches in the entire repository")
+    .option(
+      "-o, --output <path>",
+      "Save report document to file (e.g. audit-report.md)",
+    )
     .action(
       action(
         async (
-          options: { branch?: string; repo?: boolean },
+          options: { branch?: string; repo?: boolean; output?: string },
           command: Command,
         ) => {
           const spinner = ora(
@@ -1574,8 +1579,11 @@ export function createCli(rootPath = process.cwd()): Command {
           const tasks = state.db.listTasks();
           state.db.close();
 
-          const targetBranch = options.branch || gitSummary.branch;
-          const statusFiles = statusResult.files.map((f) => f.path);
+          const statusFiles = statusResult.files
+            .map((f) => f.path)
+            .filter(
+              (p) => !p.startsWith(".devflow/") && !p.startsWith(".git/"),
+            );
 
           const ai = new AiAssistant();
           const mappedCommits = logResult.all.map((c) => ({
@@ -1596,13 +1604,19 @@ export function createCli(rootPath = process.cwd()): Command {
           );
           spinner.stop();
 
+          if (options.output) {
+            const reportContent = buildAiAuditReport(audit);
+            const savedPath = writeReport(options.output, reportContent);
+            success(`AI Audit report written to ${savedPath}`);
+          }
+
           output(audit, json(command));
           if (!json(command)) {
             section(`DevFlow AI Quality & Risk Audit [${audit.target}]`);
             console.log(
-              `Score: ${chalk.bold.green(`${audit.score}/100`)} (${chalk.yellow(`Grade ${audit.grade}`)}) | Target: ${chalk.cyan(audit.target)}`,
+              `Score: ${chalk.bold.green(`${audit.score}/100`)} (${chalk.bold.yellow(`Grade ${audit.grade}`)}) | Target: ${chalk.cyan(audit.target)}`,
             );
-            console.log(`\n${audit.summary}\n`);
+            console.log(`\n${chalk.dim(audit.summary)}\n`);
 
             if (audit.issues.length > 0) {
               console.log(
