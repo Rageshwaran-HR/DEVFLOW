@@ -91,24 +91,44 @@ All commands can be run either globally (`devflow <command>`) or using npm scrip
 
 ---
 
-### 1. 🤖 AI Workflow Assistant (`devflow next`)
+### 1. 🤖 AI Workflow Assistant & Copilot Suite (`devflow next` & `devflow ai`)
 
-_Analyzes git state, uncommitted changes, and database tasks to tell you what to do next._
+_AI intelligence for workflow recommendations, task generation, feature breakdown, commit messages, and repository audits._
 
 ```bash
+# 1. AI Next Step Recommendation
 npm run devflow -- next
+
+# 2. AI Task Generation (Generates title, description, priority, and labels from prompt)
+npm run devflow -- ai task "Build real-time WebSocket notification hub"
+
+# 3. AI Feature Breakdown (Architect breaks down high-level goal into structured subtasks)
+npm run devflow -- ai plan "User authentication and JWT session engine"
+
+# 4. AI Automated Conventional Commit (Analyzes staged diff & generates commit message)
+npm run devflow -- ai commit --all
+
+# 5. AI Repository Quality & Velocity Audit (Scores commit quality, health, & action items)
+npm run devflow -- ai audit
 ```
 
 <details>
 <summary><b>📸 View Sample Terminal Output</b></summary>
 
 ```text
-DevFlow AI Workflow Assistant
-─────────────────────────────────────
-ℹ Detected 2 uncommitted changes on branch 'feature/TASK-001'.
+DevFlow AI Repository Audit
+───────────────────────────────────
+Score: 85/100 (Grade A)
 
-💡 Recommended Next Step:
-   devflow commit --type feat --message "your commit description" --all
+DevFlow AI Quality Audit Score: 85/100 (Grade A). Evaluated 35 commits and 15 tasks.
+
+Strengths:
+  ✓ Working tree is completely clean
+  ✓ High task completion velocity (15/15 tasks completed)
+  ✓ Repository is fully in sync with remote GitHub
+
+AI Action Recommendations:
+  💡 Improve commit quality: ensure future commits follow Conventional Commits standard
 ```
 
 </details>
