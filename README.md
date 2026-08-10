@@ -110,26 +110,37 @@ devflow ai plan "User authentication and JWT session engine"
 # 4. AI Conventional Commit (Analyzes staged diff & generates commit message)
 devflow ai commit --all
 
-# 5. AI Repository Quality Audit (Evaluates commit ratio, health, and recommendations)
-devflow ai audit
+# 5. AI Quality & Risk Audit (Audits current branch, specific branch, or whole repo with exact problem locations)
+devflow ai audit                         # Audit current branch
+devflow ai audit --branch feature/login  # Audit specific branch
+devflow ai audit --repo                  # Audit all branches in whole repository
 ```
 
 <details>
 <summary><b>📸 View Sample Terminal Output</b></summary>
 
 ```text
-DevFlow AI Repository Audit
-───────────────────────────────────
-Score: 85/100 (Grade A)
+DevFlow AI Quality & Risk Audit [Whole Repository (19 local branches)]
+────────────────────────────────────────────────────────────────────────
+Score: 65/100 (Grade C) | Target: Whole Repository (19 local branches)
 
-DevFlow AI Quality Audit Score: 85/100 (Grade A). Evaluated 35 commits and 15 tasks.
+DevFlow AI Audit for Whole Repository: Score 65/100 (Grade C). Evaluated 43 commit(s), 12 issue(s) flagged.
+
+Identified Failure / Problem Locations & Risks:
+  ✖ file://src/ai.ts: Uncommitted modifications in src/ai.ts
+    └─ Fix: Run `devflow commit --all` or `devflow stash save`
+  ✖ commit:b68912a: Non-conventional commit message: "release: v0.7.0 production release"
+    └─ Fix: Use conventional commit format: `feat(scope): description`
+  ✖ branch:feature/TASK-001: Feature branch 'feature/TASK-001' is unmerged
+    └─ Fix: Merge branch 'feature/TASK-001' into dev/qual or run `devflow branch cleanup`
 
 Strengths:
-  ✓ Working tree is completely clean
-  ✓ High task completion velocity (15/15 tasks completed)
+  ✓ Tracking 16 active feature branch(es)
+  ✓ High task completion velocity (16/20 tasks completed)
   ✓ Repository is fully in sync with remote GitHub
 
 AI Action Recommendations:
+  💡 Stage and commit 2 uncommitted file(s) using `devflow commit --all`
   💡 Improve commit quality: ensure future commits follow Conventional Commits standard
 ```
 
