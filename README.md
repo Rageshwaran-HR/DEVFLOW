@@ -145,9 +145,9 @@ npm run devflow -- branch cleanup --yes
 
 ---
 
-### 4. Conventional Commits & Git Control
+### 4. Conventional Commits, Git Control & Stashing
 
-Enforce clean commit messages across your team:
+Enforce clean commit messages and manage local stashes cleanly:
 
 ```bash
 # Check working tree status
@@ -159,8 +159,22 @@ npm run devflow -- git diff
 # Commit changes using Conventional Commits standard
 npm run devflow -- commit --type feat --scope auth --message "add login API endpoint" --all
 
-# Push changes to remote repository
+# Safely merge a branch with clean conflict reports
+npm run devflow -- git merge feature/login
+
+# Push changes (current branch or all branches) to remote repository
 npm run devflow -- git push --set-upstream
+npm run devflow -- git push --all
+
+# Sync all branches to remote GitHub cleanly
+npm run devflow -- sync
+
+# Manage Git stashes cleanly
+npm run devflow -- stash save "WIP feature login"
+npm run devflow -- stash list
+npm run devflow -- stash pop
+npm run devflow -- stash apply
+npm run devflow -- stash drop
 
 # Pull & fetch updates
 npm run devflow -- git pull
