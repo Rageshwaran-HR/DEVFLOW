@@ -1,61 +1,89 @@
-# Commands
+# Complete DevFlow Command Reference
 
-## Project and tasks
+## 🤖 AI Copilot & Workflow Intelligence
 
-| Command                                         | Purpose                                            |
-| ----------------------------------------------- | -------------------------------------------------- |
-| `devflow init`                                  | Detect Git metadata and create local DevFlow state |
-| `devflow task add <title>`                      | Create a local task                                |
-| `devflow task list`                             | List tasks, optionally filtered by status          |
-| `devflow task show <id>`                        | Show one task                                      |
-| `devflow task start/complete/close/reopen <id>` | Move a task through its lifecycle                  |
-| `devflow task delete <id> --yes`                | Delete a task with confirmation                    |
-| `devflow start <id>`                            | Create a task branch and start work                |
-| `devflow finish <id>`                           | Validate completion readiness                      |
+| Command                    | Options                                                    | Purpose                                                                                                      |
+| :------------------------- | :--------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------- |
+| `devflow next`             | —                                                          | AI workflow assistant recommending your next command based on git tree & task state                          |
+| `devflow ai task <prompt>` | —                                                          | AI task generator: converts prompt into structured title, description, priority, & labels                    |
+| `devflow ai plan <goal>`   | —                                                          | AI feature architect: breaks down a high-level goal into implementation subtasks                             |
+| `devflow ai commit`        | `--all`                                                    | AI conventional commit generator: analyzes staged diff and commits automatically                             |
+| `devflow ai audit`         | `-b, --branch <name>`, `-r, --repo`, `-o, --output <path>` | AI Quality & Risk Audit: flags exact problem files, commit hashes, branch risks, & generates markdown report |
+| `devflow changelog`        | `-o, --output <path>`                                      | Automated Conventional Commit changelog builder grouped by type and scope                                    |
 
-## Git
+## 🔄 Multi-Branch Sync & Stashes
 
-| Command                              | Purpose                            |
-| ------------------------------------ | ---------------------------------- |
-| `devflow branch list`                | List local branches                |
-| `devflow branch create <name>`       | Create and switch to a branch      |
-| `devflow branch switch <name>`       | Switch branches                    |
-| `devflow branch delete <name> --yes` | Delete a local branch              |
-| `devflow branch cleanup --yes`       | Delete safe merged branches        |
-| `devflow git status`                 | Show branch and working tree state |
-| `devflow git log`                    | Show recent commits                |
-| `devflow git diff`                   | Show unstaged changes              |
-| `devflow git fetch/pull/push`        | Sync with remotes                  |
-| `devflow git merge/rebase <branch>`  | Integrate another branch           |
-| `devflow commit ...`                 | Create a conventional commit       |
+| Command                    | Options | Purpose                                                                           |
+| :------------------------- | :------ | :-------------------------------------------------------------------------------- |
+| `devflow sync`             | —       | 1-Click push of all local feature, dev, qual, and main branches cleanly to GitHub |
+| `devflow stash save [msg]` | —       | Stash uncommitted local modifications with custom description                     |
+| `devflow stash list`       | —       | List all stashes in clean UI format                                               |
+| `devflow stash pop`        | —       | Apply and remove top stash                                                        |
+| `devflow stash apply [id]` | —       | Apply a stash without removing it                                                 |
+| `devflow stash drop [id]`  | —       | Drop a specific stash                                                             |
 
-## GitHub
+## 📝 Tasks & Automation
 
-GitHub commands require a remote that points to GitHub and `DEVFLOW_GITHUB_TOKEN`.
+| Command                      | Options                                            | Purpose                                                                   |
+| :--------------------------- | :------------------------------------------------- | :------------------------------------------------------------------------ |
+| `devflow task add <title>`   | `--priority <p>`, `--labels <l>`, `--assignee <a>` | Create a local task in SQLite database                                    |
+| `devflow task list`          | `--status <s                                       | TODO                                                                      | IN_PROGRESS | COMPLETED | CLOSED>` | List local tasks |
+| `devflow task show <id>`     | —                                                  | Display complete task details                                             |
+| `devflow task complete <id>` | —                                                  | Mark a task as completed                                                  |
+| `devflow task reopen <id>`   | —                                                  | Reopen a completed task                                                   |
+| `devflow task delete <id>`   | `--yes`                                            | Delete a task safely                                                      |
+| `devflow start <id>`         | —                                                  | Create feature branch `feature/<id>-<title>` & switch task to IN_PROGRESS |
+| `devflow finish <id>`        | `--merge`, `--yes`                                 | Guarded completion check, PR merge, and branch cleanup                    |
 
-| Command                                       | Purpose                          |
-| --------------------------------------------- | -------------------------------- |
-| `devflow auth status`                         | Validate GitHub authentication   |
-| `devflow issue list/show/create/close/reopen` | Manage Issues                    |
-| `devflow issue link <task> <number>`          | Link an Issue to a task          |
-| `devflow pr list/show/create/checkout`        | Manage Pull Requests             |
-| `devflow pr approve <number>`                 | Approve a Pull Request           |
-| `devflow pr request-changes <number>`         | Request changes                  |
-| `devflow pr merge <number> --yes`             | Merge with explicit confirmation |
-| `devflow pr close <number> --yes`             | Close with explicit confirmation |
-| `devflow review <number>`                     | Show review readiness            |
-| `devflow review check <number>`               | Exit non-zero when not ready     |
+## 🌿 Git & Conventional Commits
 
-## Reporting
+| Command                        | Options                                               | Purpose                                          |
+| :----------------------------- | :---------------------------------------------------- | :----------------------------------------------- |
+| `devflow branch list`          | —                                                     | List local branches & associated task IDs        |
+| `devflow branch show`          | —                                                     | Display active branch & task association         |
+| `devflow branch cleanup`       | `--yes`                                               | Safely delete merged local branches              |
+| `devflow branch delete <name>` | `--yes`                                               | Delete a local branch                            |
+| `devflow git status`           | —                                                     | Show clean status summary                        |
+| `devflow git diff`             | `--staged`                                            | Show unstaged or staged diff                     |
+| `devflow git log`              | `--count <n>`                                         | Show recent commit history                       |
+| `devflow git push`             | `--set-upstream`, `--all`                             | Push current branch or all branches to remote    |
+| `devflow git push-all`         | —                                                     | Push all local branches to remote                |
+| `devflow git pull / fetch`     | —                                                     | Pull / fetch updates from origin                 |
+| `devflow git merge <branch>`   | —                                                     | Safe merge with formatted conflict error reports |
+| `devflow git rebase <branch>`  | —                                                     | Rebase current branch                            |
+| `devflow commit`               | `--type <t>`, `--scope <s>`, `--message <m>`, `--all` | Conventional Commit generator with AI fallback   |
 
-| Command                       | Purpose                                  |
-| ----------------------------- | ---------------------------------------- |
-| `devflow status`              | Show current task and Git state          |
-| `devflow dashboard`           | Show a project overview                  |
-| `devflow doctor`              | Check repository health                  |
-| `devflow report`              | Generate Markdown development report     |
-| `devflow readme`              | Safely update the DevFlow README section |
-| `devflow config list/get/set` | Manage validated settings                |
-| `devflow workflow set/show`   | Manage GitFlow or trunk strategy         |
+## 🐙 GitHub Integration
 
-Most read/list commands support the global `--json` option.
+| Command                          | Options                    | Purpose                                                           |
+| :------------------------------- | :------------------------- | :---------------------------------------------------------------- |
+| `devflow auth status`            | —                          | Validate GitHub API authentication token (`DEVFLOW_GITHUB_TOKEN`) |
+| `devflow issue list`             | —                          | List open GitHub issues                                           |
+| `devflow issue create`           | `--task <id>`              | Create a GitHub issue from local task                             |
+| `devflow issue show <#>`         | —                          | Show issue details                                                |
+| `devflow issue link <task> <#>`  | —                          | Link a local task to GitHub issue                                 |
+| `devflow issue close/reopen <#>` | —                          | Close or reopen an issue                                          |
+| `devflow pr create`              | `--task <id>`              | Create a Pull Request from active branch                          |
+| `devflow pr list`                | —                          | List open Pull Requests                                           |
+| `devflow pr show <#>`            | —                          | Show PR state and CI details                                      |
+| `devflow pr checkout <#>`        | —                          | Checkout PR branch locally                                        |
+| `devflow pr approve <#>`         | —                          | Approve a Pull Request                                            |
+| `devflow pr request-changes <#>` | —                          | Request changes on a PR                                           |
+| `devflow pr merge <#>`           | `--yes`, `--method <squash | merge                                                             | rebase>` | Merge PR safely |
+| `devflow review <#>`             | —                          | Inspect PR review approvals & CI state                            |
+| `devflow review check <#>`       | —                          | Non-zero exit code if PR is not merge-ready (for CI scripts)      |
+
+## 📊 Reporting, Diagnostics & System
+
+| Command                       | Options           | Purpose                                             |
+| :---------------------------- | :---------------- | :-------------------------------------------------- |
+| `devflow status`              | `--json`          | Current branch and task status overview             |
+| `devflow dashboard`           | —                 | Interactive live terminal project overview          |
+| `devflow doctor`              | `--fix`           | Repository health diagnostics doctor                |
+| `devflow report`              | `--output <path>` | Generate Markdown development report                |
+| `devflow readme`              | `--file <path>`   | Safely update README DevFlow status block           |
+| `devflow workflow show/set`   | `<trunk           | gitflow>`                                           | Manage branching strategy |
+| `devflow config list/get/set` | `<key> [value]`   | View or update local configuration settings         |
+| `devflow init`                | `--yes`           | Initialize DevFlow SQLite database & Git repository |
+
+_All list and query commands support the `--json` option for machine-readable JSON output._
