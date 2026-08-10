@@ -383,46 +383,37 @@ export function createCli(rootPath = process.cwd()): Command {
     .option("--set-upstream", "Set upstream on first push")
     .option("--all", "Push all branches to remote")
     .action(
-      action(
-        async (
-          options: { setUpstream?: boolean; all?: boolean },
-          command: Command,
-        ) => {
-          const git = new GitManager(rootPath);
-          if (options.all) {
-            const spinner = ora(
-              "Pushing all branches to remote GitHub...",
-            ).start();
-            try {
-              const res = await git.pushAll();
-              spinner.stop();
-              output(res, json(command));
-              if (!json(command)) {
-                section("DevFlow GitHub Sync");
-                success(
-                  `Pushed ${res.pushedBranches.length} branches to GitHub remote`,
-                );
-                if (res.remoteUrl) info(`Remote: ${res.remoteUrl}`);
-                console.log(
-                  res.pushedBranches
-                    .map((b) => `  ${chalk.cyan("•")} ${b}`)
-                    .join("\n"),
-                );
-              }
-            } catch (err: unknown) {
-              spinner.stop();
-              const msg = err instanceof Error ? err.message : String(err);
-              throw new DevFlowError(`Failed to push all branches: ${msg}`);
+      action(async (options: { setUpstream?: boolean; all?: boolean }, command: Command) => {
+        const git = new GitManager(rootPath);
+        if (options.all) {
+          const spinner = ora("Pushing all branches to remote GitHub...").start();
+          try {
+            const res = await git.pushAll();
+            spinner.stop();
+            output(res, json(command));
+            if (!json(command)) {
+              section("DevFlow GitHub Sync");
+              success(`Pushed ${res.pushedBranches.length} branches to GitHub remote`);
+              if (res.remoteUrl) info(`Remote: ${res.remoteUrl}`);
+              console.log(
+                res.pushedBranches
+                  .map((b) => `  ${chalk.cyan("•")} ${b}`)
+                  .join("\n"),
+              );
             }
-            return;
+          } catch (err: unknown) {
+            spinner.stop();
+            const msg = err instanceof Error ? err.message : String(err);
+            throw new DevFlowError(`Failed to push all branches: ${msg}`);
           }
-          const status = await git.status();
-          if (!status.isClean())
-            warning("Pushing a branch with a dirty working tree.");
-          await git.push(Boolean(options.setUpstream));
-          success("Branch pushed");
-        },
-      ),
+          return;
+        }
+        const status = await git.status();
+        if (!status.isClean())
+          warning("Pushing a branch with a dirty working tree.");
+        await git.push(Boolean(options.setUpstream));
+        success("Branch pushed");
+      }),
     );
 
   gitCommand
@@ -438,9 +429,7 @@ export function createCli(rootPath = process.cwd()): Command {
           output(res, json(command));
           if (!json(command)) {
             section("DevFlow GitHub Sync");
-            success(
-              `Pushed ${res.pushedBranches.length} branches to GitHub remote`,
-            );
+            success(`Pushed ${res.pushedBranches.length} branches to GitHub remote`);
             if (res.remoteUrl) info(`Remote: ${res.remoteUrl}`);
             console.log(
               res.pushedBranches
@@ -639,11 +628,21 @@ export function createCli(rootPath = process.cwd()): Command {
         if (status.isClean())
           throw new DevFlowError("There are no changes to commit.");
         if (options.all) await git.add(["."]);
-        if (!options.type || !options.message)
-          throw new DevFlowError(
-            "A conventional commit type and message are required.",
-            'Example: devflow commit --type feat --scope auth --message "add login endpoint"',
-          );
+
+        let commitType = options.type;
+        let commitScope = options.scope;
+        let commitMsg = options.message;
+
+        if (!commitType || !commitMsg) {
+          const diff = await git.diff(true);
+          const ai = new AiAssistant();
+          const aiSuggestion = await ai.suggestCommitMessage(diff || "");
+          commitType = commitType || aiSuggestion.type;
+          commitScope = commitScope || aiSuggestion.scope;
+          commitMsg = commitMsg || aiSuggestion.message;
+          info(`AI generated commit spec: ${commitType}${commitScope ? `(${commitScope})` : ""}: ${commitMsg}`);
+        }
+
         const allowed = [
           "feat",
           "fix",
@@ -656,14 +655,16 @@ export function createCli(rootPath = process.cwd()): Command {
           "ci",
           "build",
         ];
-        if (!allowed.includes(options.type))
+        if (!commitType || !allowed.includes(commitType))
           throw new DevFlowError(
-            `Invalid commit type: ${options.type}`,
-            `Use one of: ${allowed.join(", ")}`,
+            `Invalid commit type: ${commitType}`,
+            `Allowed types: ${allowed.join(", ")}`,
           );
-        const message = `${options.type}${options.scope ? `(${options.scope})` : ""}: ${options.message.trim()}`;
-        const hash = await git.commit(message);
-        success(`Created commit ${hash.slice(0, 8)} ${message}`);
+
+        const scopePart = commitScope ? `(${commitScope})` : "";
+        const formatted = `${commitType}${scopePart}: ${commitMsg}`;
+        const hash = await git.commit(formatted);
+        success(`Created commit ${hash.slice(0, 8)} ${formatted}`);
       },
     ),
   );
@@ -1327,9 +1328,7 @@ export function createCli(rootPath = process.cwd()): Command {
 
   program
     .command("next")
-    .description(
-      "AI-assisted workflow recommendation for what command to run next",
-    )
+    .description("AI-assisted workflow recommendation for what command to run next")
     .action(
       action(async (command: Command) => {
         const state = requireState();
@@ -1339,13 +1338,19 @@ export function createCli(rootPath = process.cwd()): Command {
 
         section("DevFlow AI Workflow Assistant");
         if (!git.clean) {
+          const diff = await state.git.diff();
+          const ai = new AiAssistant();
+          const aiCommit = await ai.suggestCommitMessage(diff || "");
+          const scopePart = aiCommit.scope ? ` --scope ${aiCommit.scope}` : "";
+
           info(
             `Detected ${git.modified + git.untracked + git.staged} uncommitted changes on branch '${git.branch}'.`,
           );
           console.log(`\n💡 ${chalk.bold.green("Recommended Next Step:")}`);
           console.log(
-            `   ${chalk.cyan('devflow commit --type feat --message "your commit description" --all')}`,
+            `   ${chalk.cyan(`devflow commit --type ${aiCommit.type}${scopePart} --message "${aiCommit.message}" --all`)}`,
           );
+          console.log(`   (Or run: ${chalk.cyan("devflow ai commit --all")})`);
           return;
         }
 
@@ -1424,9 +1429,7 @@ export function createCli(rootPath = process.cwd()): Command {
 
   aiCommand
     .command("task <prompt>")
-    .description(
-      "Generate task title, description, priority, and labels using AI",
-    )
+    .description("Generate task title, description, priority, and labels using AI")
     .action(
       action(async (prompt: string, command: Command) => {
         const spinner = ora("DevFlow AI generating task spec...").start();
@@ -1498,9 +1501,7 @@ export function createCli(rootPath = process.cwd()): Command {
 
   aiCommand
     .command("commit")
-    .description(
-      "Analyze staged changes and generate an AI conventional commit",
-    )
+    .description("Analyze staged changes and generate an AI conventional commit")
     .option("-a, --all", "Stage all changes before generating commit")
     .action(
       action(async (options: { all?: boolean }, command: Command) => {
@@ -1568,9 +1569,7 @@ export function createCli(rootPath = process.cwd()): Command {
           if (audit.strengths.length > 0) {
             console.log(chalk.bold.green("Strengths:"));
             console.log(
-              audit.strengths
-                .map((s) => `  ${chalk.green("✓")} ${s}`)
-                .join("\n"),
+              audit.strengths.map((s) => `  ${chalk.green("✓")} ${s}`).join("\n"),
             );
           }
 
