@@ -164,9 +164,76 @@ export class GitManager {
   async fetch(): Promise<void> {
     await this.git.fetch();
   }
+  async pushAll(): Promise<{ pushedBranches: string[]; remoteUrl: string | null }> {
+    const remote = await this.remote();
+    const branches = await this.branches();
+    await this.git.push(["--all", "origin"]);
+    return {
+      pushedBranches: branches.all,
+      remoteUrl: remote,
+    };
+  }
+
   async merge(branch: string): Promise<void> {
     await this.git.merge([branch]);
   }
+
+  async mergeSafe(
+    branch: string,
+    noFf = true,
+  ): Promise<{ success: boolean; message: string; conflicts?: string[] }> {
+    try {
+      const args = noFf ? ["--no-ff", branch] : [branch];
+      await this.git.merge(args);
+      return {
+        success: true,
+        message: `Successfully merged '${branch}' into '${await this.currentBranch()}'`,
+      };
+    } catch (err: unknown) {
+      const status = await this.status();
+      if (status.conflicted.length > 0) {
+        return {
+          success: false,
+          message: `Merge conflict while merging '${branch}'`,
+          conflicts: status.conflicted,
+        };
+      }
+      const msg = err instanceof Error ? err.message : String(err);
+      return { success: false, message: msg };
+    }
+  }
+
+  async stashSave(message?: string): Promise<string> {
+    const args = message ? ["save", message] : ["save"];
+    return this.git.stash(args);
+  }
+
+  async stashList(): Promise<Array<{ id: string; message: string }>> {
+    const raw = await this.git.stash(["list"]);
+    if (!raw.trim()) return [];
+    return raw
+      .trim()
+      .split("\n")
+      .map((line) => {
+        const match = line.match(/^(stash@\{\d+\}):\s*(.*)$/);
+        return match
+          ? { id: match[1], message: match[2] }
+          : { id: "stash", message: line };
+      });
+  }
+
+  async stashPop(): Promise<string> {
+    return this.git.stash(["pop"]);
+  }
+
+  async stashApply(id = "stash@{0}"): Promise<string> {
+    return this.git.stash(["apply", id]);
+  }
+
+  async stashDrop(id = "stash@{0}"): Promise<string> {
+    return this.git.stash(["drop", id]);
+  }
+
   async rebase(branch: string): Promise<void> {
     await this.git.rebase([branch]);
   }
