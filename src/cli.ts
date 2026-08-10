@@ -1,5 +1,6 @@
 import { Command } from "commander";
 import chalk from "chalk";
+import ora from "ora";
 import { basename, resolve } from "node:path";
 import { ConfigManager } from "./config.js";
 import { Database } from "./database.js";
@@ -378,9 +379,33 @@ export function createCli(rootPath = process.cwd()): Command {
     .command("push")
     .description("Push the current branch")
     .option("--set-upstream", "Set upstream on first push")
+    .option("--all", "Push all branches to remote")
     .action(
-      action(async (options: { setUpstream?: boolean }) => {
+      action(async (options: { setUpstream?: boolean; all?: boolean }, command: Command) => {
         const git = new GitManager(rootPath);
+        if (options.all) {
+          const spinner = ora("Pushing all branches to remote GitHub...").start();
+          try {
+            const res = await git.pushAll();
+            spinner.stop();
+            output(res, json(command));
+            if (!json(command)) {
+              section("DevFlow GitHub Sync");
+              success(`Pushed ${res.pushedBranches.length} branches to GitHub remote`);
+              if (res.remoteUrl) info(`Remote: ${res.remoteUrl}`);
+              console.log(
+                res.pushedBranches
+                  .map((b) => `  ${chalk.cyan("•")} ${b}`)
+                  .join("\n"),
+              );
+            }
+          } catch (err: unknown) {
+            spinner.stop();
+            const msg = err instanceof Error ? err.message : String(err);
+            throw new DevFlowError(`Failed to push all branches: ${msg}`);
+          }
+          return;
+        }
         const status = await git.status();
         if (!status.isClean())
           warning("Pushing a branch with a dirty working tree.");
@@ -388,15 +413,62 @@ export function createCli(rootPath = process.cwd()): Command {
         success("Branch pushed");
       }),
     );
+
   gitCommand
-    .command("merge <branch>")
-    .description("Merge a branch into the current branch")
+    .command("push-all")
+    .description("Push all local branches to the remote server")
     .action(
-      action(async (branchNameValue: string) => {
-        await new GitManager(rootPath).merge(branchNameValue);
-        success(`Merged ${branchNameValue}`);
+      action(async (command: Command) => {
+        const git = new GitManager(rootPath);
+        const spinner = ora("Pushing all branches to remote GitHub...").start();
+        try {
+          const res = await git.pushAll();
+          spinner.stop();
+          output(res, json(command));
+          if (!json(command)) {
+            section("DevFlow GitHub Sync");
+            success(`Pushed ${res.pushedBranches.length} branches to GitHub remote`);
+            if (res.remoteUrl) info(`Remote: ${res.remoteUrl}`);
+            console.log(
+              res.pushedBranches
+                .map((b) => `  ${chalk.cyan("•")} ${b}`)
+                .join("\n"),
+            );
+          }
+        } catch (err: unknown) {
+          spinner.stop();
+          const msg = err instanceof Error ? err.message : String(err);
+          throw new DevFlowError(`Failed to push all branches: ${msg}`);
+        }
       }),
     );
+
+  gitCommand
+    .command("merge <branch>")
+    .description("Safely merge a branch with clean error & conflict reports")
+    .action(
+      action(async (branchNameValue: string) => {
+        const git = new GitManager(rootPath);
+        const res = await git.mergeSafe(branchNameValue);
+        if (res.success) {
+          success(res.message);
+        } else {
+          if (res.conflicts && res.conflicts.length > 0) {
+            warning(res.message);
+            console.log(chalk.bold.yellow("\nConflicting files:"));
+            console.log(
+              res.conflicts.map((f) => `  ${chalk.red("✖")} ${f}`).join("\n"),
+            );
+            info(
+              "\nSuggested action: Resolve conflicts in the files listed above, stage them with `devflow git add`, and run `devflow commit`.",
+            );
+          } else {
+            throw new DevFlowError(res.message);
+          }
+        }
+      }),
+    );
+
   gitCommand
     .command("rebase <branch>")
     .description("Rebase the current branch")
@@ -404,6 +476,109 @@ export function createCli(rootPath = process.cwd()): Command {
       action(async (branchNameValue: string) => {
         await new GitManager(rootPath).rebase(branchNameValue);
         success(`Rebased onto ${branchNameValue}`);
+      }),
+    );
+
+  const stashCommand = program
+    .command("stash")
+    .description("Manage git stashes cleanly");
+
+  stashCommand
+    .command("save [message]")
+    .alias("push")
+    .description("Stash uncommitted changes with optional message")
+    .action(
+      action(async (message?: string) => {
+        const git = new GitManager(rootPath);
+        const res = await git.stashSave(message);
+        success(res || "Stashed uncommitted changes.");
+      }),
+    );
+
+  stashCommand
+    .command("list")
+    .description("List all local stashes")
+    .action(
+      action(async (command: Command) => {
+        const git = new GitManager(rootPath);
+        const stashes = await git.stashList();
+        output(stashes, json(command));
+        if (!json(command)) {
+          if (stashes.length === 0) {
+            info("No stashes found.");
+          } else {
+            section("Git Stashes");
+            console.log(
+              stashes
+                .map((s) => `  ${chalk.yellow(s.id)} ${s.message}`)
+                .join("\n"),
+            );
+          }
+        }
+      }),
+    );
+
+  stashCommand
+    .command("pop")
+    .description("Pop and apply the most recent stash")
+    .action(
+      action(async () => {
+        const git = new GitManager(rootPath);
+        const res = await git.stashPop();
+        success(res || "Applied and popped top stash.");
+      }),
+    );
+
+  stashCommand
+    .command("apply [id]")
+    .description("Apply a stash without removing it")
+    .action(
+      action(async (id?: string) => {
+        const git = new GitManager(rootPath);
+        const res = await git.stashApply(id);
+        success(res || `Applied ${id || "stash@{0}"}.`);
+      }),
+    );
+
+  stashCommand
+    .command("drop [id]")
+    .description("Drop a stash")
+    .action(
+      action(async (id?: string) => {
+        const git = new GitManager(rootPath);
+        const res = await git.stashDrop(id);
+        success(res || `Dropped ${id || "stash@{0}"}.`);
+      }),
+    );
+
+  program
+    .command("sync")
+    .description("Push all branches and sync changes to GitHub remote")
+    .action(
+      action(async (command: Command) => {
+        const git = new GitManager(rootPath);
+        const spinner = ora("Syncing all branches to GitHub remote...").start();
+        try {
+          const res = await git.pushAll();
+          spinner.stop();
+          output(res, json(command));
+          if (!json(command)) {
+            section("DevFlow GitHub Sync");
+            success(
+              `Pushed ${res.pushedBranches.length} branches to GitHub remote`,
+            );
+            if (res.remoteUrl) info(`Remote: ${res.remoteUrl}`);
+            console.log(
+              res.pushedBranches
+                .map((b) => `  ${chalk.cyan("•")} ${b}`)
+                .join("\n"),
+            );
+          }
+        } catch (err: unknown) {
+          spinner.stop();
+          const msg = err instanceof Error ? err.message : String(err);
+          throw new DevFlowError(`Failed to sync to GitHub: ${msg}`);
+        }
       }),
     );
 
