@@ -27,7 +27,6 @@ export function output(value: unknown, json: boolean): void {
     console.log(value);
     return;
   }
-  console.log(value);
 }
 
 export function success(message: string): void {
