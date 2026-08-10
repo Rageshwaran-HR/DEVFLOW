@@ -1,11 +1,35 @@
 {
   "name": "devflow",
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "Next-Gen Developer Workflow Command Center with Built-In AI Copilot",
   "license": "MIT",
   "type": "module",
+  "author": "Rageshwaran HR",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Rageshwaran-HR/DEVFLOW.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Rageshwaran-HR/DEVFLOW/issues"
+  },
+  "homepage": "https://github.com/Rageshwaran-HR/DEVFLOW#readme",
+  "keywords": [
+    "cli",
+    "developer-workflow",
+    "git",
+    "github",
+    "task-management",
+    "ai-copilot",
+    "conventional-commits"
+  ],
   "bin": {
     "devflow": "dist/index.js"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "build": "npm run devflow:build && npm run typecheck",
     "typecheck": "tsc -p tsconfig.cli.json",
@@ -18,12 +42,14 @@
     "test": "npm run devflow:test",
     "lint": "npm run devflow:lint",
     "format": "npm run devflow:format",
-    "format:check": "npm run devflow:format:check"
+    "format:check": "npm run devflow:format:check",
+    "prepublishOnly": "npm run build && npm test"
   },
-  "private": true,
   "dependencies": {
     "@octokit/rest": "^22.0.1",
+    "@types/better-sqlite3": "^7.6.12",
     "@types/sql.js": "^1.4.11",
+    "better-sqlite3": "^11.8.1",
     "chalk": "^5.6.2",
     "commander": "^14.0.3",
     "ora": "^9.4.1",
@@ -32,11 +58,9 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.12",
     "@types/node": "^24.0.0",
     "@typescript-eslint/eslint-plugin": "^8.66.0",
     "@typescript-eslint/parser": "^8.66.0",
-    "better-sqlite3": "^11.8.1",
     "eslint": "^9.39.5",
     "prettier": "^3.9.6",
     "tsx": "^4.21.0",

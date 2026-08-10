@@ -33,12 +33,32 @@ import {
 } from "./utils.js";
 import { formatDoctor, runDoctor } from "./doctor.js";
 
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+function getPackageVersion(): string {
+  try {
+    const currentDir = dirname(fileURLToPath(import.meta.url));
+    const pkgPath = join(currentDir, "../package.json");
+    if (existsSync(pkgPath)) {
+      const pkg = JSON.parse(readFileSync(pkgPath, "utf8")) as {
+        version?: string;
+      };
+      if (pkg.version) return pkg.version;
+    }
+  } catch {
+    // Fallback
+  }
+  return "0.1.0";
+}
+
 export function createCli(rootPath = process.cwd()): Command {
   const program = new Command();
   program
     .name("devflow")
     .description("Developer Workflow Command Center")
-    .version("0.1.0")
+    .version(getPackageVersion())
     .option("--json", "Output machine-readable JSON where supported");
 
   const json = (_command?: unknown): boolean => process.argv.includes("--json");
