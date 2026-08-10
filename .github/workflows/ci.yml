@@ -2,26 +2,38 @@ name: DevFlow CI
 
 on:
   push:
-    branches: ["**"]
+    branches: [main, dev, qual]
   pull_request:
-
-permissions:
-  contents: read
+    branches: [main, dev, qual]
 
 jobs:
-  quality:
+  test-and-pack:
+    name: Build, Test & Verify Package
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          version: 10
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 24
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm run devflow:build
-      - run: pnpm run devflow:lint
-      - run: pnpm run devflow:format:check
-      - run: pnpm run devflow:test
+          node-version: '20'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Typecheck & Build CLI
+        run: npm run build
+
+      - name: Run Vitest Unit Tests
+        run: npm test
+
+      - name: Verify Prettier Code Formatting
+        run: npm run format:check
+
+      - name: Verify ESLint Rules
+        run: npm run lint
+
+      - name: Perform NPM Pack Dry-Run
+        run: npm pack --dry-run

@@ -4,8 +4,9 @@
 
 ### **Next-Gen Developer Workflow Command Center with Built-In AI Copilot**
 
-_A local-first CLI orchestrating the entire lifecycle from AI feature planning, local task creation, Git branches, conventional commits, GitHub Pull Requests, live CI checks, AI workflow recommendations, and automated changelogs._
+_A production-ready npm CLI orchestrating the entire lifecycle from AI feature planning, local task creation, Git branches, conventional commits, GitHub Pull Requests, live CI checks, AI workflow recommendations, and automated changelogs._
 
+[![npm Version](https://img.shields.io/npm/v/devflow.svg?style=for-the-badge&logo=npm)](https://www.npmjs.com)
 [![Node.js Version](https://img.shields.io/badge/node-%3E%3D20.0.0-brightgreen.svg?style=for-the-badge&logo=node.js)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue.svg?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 [![Database](https://img.shields.io/badge/Database-SQLite-003B57.svg?style=for-the-badge&logo=sqlite)](https://sqlite.org)
@@ -17,7 +18,72 @@ _A local-first CLI orchestrating the entire lifecycle from AI feature planning, 
 </div>
 
 > [!NOTE]
-> **Local-First Architecture**: Task states and project metadata are stored locally in `.devflow/devflow.db`. GitHub authentication is optional, operating strictly in runtime memory without storing secret tokens inside your workspace.
+> **Local-First & Isolated Architecture**: Project state and tasks are stored locally inside `<your-project>/.devflow/devflow.db`. Global npm installations NEVER share databases or pollute root directories across different projects.
+
+---
+
+## 💻 Installation
+
+Install DevFlow globally via npm:
+
+```bash
+npm install -g devflow
+# Or scoped: npm install -g @rageshwaran/devflow
+```
+
+Verify installation:
+
+```bash
+devflow --version
+devflow --help
+```
+
+---
+
+## ⚡ Quick Start (Global CLI)
+
+```bash
+# 1. Navigate to your project directory
+cd my-app
+
+# 2. Initialize DevFlow (detects Git repository & sets up local .devflow state)
+devflow init
+
+# 3. Add your first development task
+devflow task add "Implement user authentication" --priority high
+
+# 4. Start work (creates branch feature/TASK-001-implement-user-authentication)
+devflow start TASK-001
+
+# 5. Check AI recommended next step
+devflow next
+
+# 6. Commit work with Conventional Commits (or AI auto-commit)
+devflow commit --type feat --scope auth --message "add login endpoint" --all
+
+# 7. Complete task
+devflow finish TASK-001
+```
+
+---
+
+## 🚀 NPX Usage (Without Global Installation)
+
+Run DevFlow instantly in any directory without permanent global installation:
+
+```bash
+# Initialize project
+npx devflow init
+
+# Check repository health
+npx devflow doctor
+
+# Get AI next step guidance
+npx devflow next
+
+# Run AI quality & risk audit across repository
+npx devflow ai audit --repo
+```
 
 ---
 
@@ -29,38 +95,18 @@ _A local-first CLI orchestrating the entire lifecycle from AI feature planning, 
 | 💡 **AI Workflow Assistant (`devflow next`)**            | Analyzes git status, uncommitted changes, and active tasks to recommend your exact next CLI step.                         |
 | 📑 **Automated Changelog Engine (`devflow changelog`)**  | Parses Conventional Commits and generates clean `CHANGELOG.md` releases grouped by scope.                                 |
 | 🔄 **1-Click Multi-Branch GitHub Sync (`devflow sync`)** | Pushes all local feature, dev, qual, and main branches cleanly with a live terminal spinner.                              |
-| 💾 **Built-in SQLite Persistence**                       | Tracks tasks locally with zero subscription costs or cloud lock-in (`.devflow/devflow.db`).                               |
+| 💾 **Built-in SQLite Persistence**                       | Tracks tasks locally with zero subscription costs or cloud lock-in (`<project>/.devflow/devflow.db`).                     |
 | 🌿 **Automated Task-to-Branch Flow (`devflow start`)**   | Creates feature branches, checks them out, and updates task state in a single step.                                       |
 | 🩺 **Repository Doctor (`devflow doctor`)**              | Automatically audits repository health, branch divergence, uncommitted changes, and configs.                              |
 | 📦 **Stash Management (`devflow stash`)**                | Clean, formatted terminal interface for saving, listing, popping, and dropping stashes.                                   |
 
 ---
 
-## 🚀 Quick Start & Installation
-
-```bash
-# 1. Clone repository
-git clone https://github.com/Rageshwaran-HR/DEVFLOW.git
-cd DEVFLOW
-
-# 2. Install dependencies
-npm install
-
-# 3. Build TypeScript CLI
-npm run devflow:build
-
-# 4. Link CLI globally (run 'devflow' from anywhere!)
-npm link
-
-# 5. Initialize DevFlow inside any Git repository
-devflow init --yes
-```
-
----
-
 ## 🔑 Environment & GitHub API Setup
 
-GitHub integration is optional. When needed for Issues, Pull Requests, AI Copilot features, and CI checks, configure your GitHub Personal Access Token (`DEVFLOW_GITHUB_TOKEN`).
+GitHub integration is optional. Local Git tasks, SQLite persistence, and heuristic AI functions work 100% offline without any API keys.
+
+When GitHub Issues, Pull Requests, live CI checks, and online GitHub AI Copilot models are needed, configure your GitHub Personal Access Token (`DEVFLOW_GITHUB_TOKEN`).
 
 ### How to Get Your GitHub Access Token
 
@@ -89,13 +135,9 @@ export DEVFLOW_GITHUB_TOKEN="ghp_your_copied_token_here"
 
 ## 🎮 Complete Structured Command Guide
 
-All commands can be run either globally (`devflow <command>`) or using npm scripts (`npm run devflow -- <command>`).
-
 ---
 
-### 1. 🤖 AI Copilot & Workflow Intelligence Suite (`devflow ai` & `devflow next`)
-
-_AI intelligence for task generation, feature breakdown, commit messages, repository audits, and next-step guidance._
+### 1. 🤖 AI Copilot Suite (`devflow ai` & `devflow next`)
 
 ```bash
 # 1. AI Next-Step Workflow Assistant
@@ -110,10 +152,11 @@ devflow ai plan "User authentication and JWT session engine"
 # 4. AI Conventional Commit (Analyzes staged diff & generates commit message)
 devflow ai commit --all
 
-# 5. AI Quality & Risk Audit (Audits current branch, specific branch, or whole repo with exact problem locations)
+# 5. AI Quality & Risk Audit (Audits current branch, specific branch, or whole repo)
 devflow ai audit                         # Audit current branch
 devflow ai audit --branch feature/login  # Audit specific branch
 devflow ai audit --repo                  # Audit all branches in whole repository
+devflow ai audit --repo -o report.md    # Save Markdown audit report file
 ```
 
 <details>
@@ -122,17 +165,9 @@ devflow ai audit --repo                  # Audit all branches in whole repositor
 ```text
 DevFlow AI Quality & Risk Audit [Whole Repository (19 local branches)]
 ────────────────────────────────────────────────────────────────────────
-Score: 65/100 (Grade C) | Target: Whole Repository (19 local branches)
+Score: 85/100 (Grade A) | Target: Whole Repository (19 local branches)
 
-DevFlow AI Audit for Whole Repository: Score 65/100 (Grade C). Evaluated 43 commit(s), 12 issue(s) flagged.
-
-Identified Failure / Problem Locations & Risks:
-  ✖ file://src/ai.ts: Uncommitted modifications in src/ai.ts
-    └─ Fix: Run `devflow commit --all` or `devflow stash save`
-  ✖ commit:b68912a: Non-conventional commit message: "release: v0.7.0 production release"
-    └─ Fix: Use conventional commit format: `feat(scope): description`
-  ✖ branch:feature/TASK-001: Feature branch 'feature/TASK-001' is unmerged
-    └─ Fix: Merge branch 'feature/TASK-001' into dev/qual or run `devflow branch cleanup`
+DevFlow AI Audit for Whole Repository: Score 85/100 (Grade A). Evaluated 43 commit(s), 0 issue(s) flagged.
 
 Strengths:
   ✓ Tracking 16 active feature branch(es)
@@ -140,7 +175,6 @@ Strengths:
   ✓ Repository is fully in sync with remote GitHub
 
 AI Action Recommendations:
-  💡 Stage and commit 2 uncommitted file(s) using `devflow commit --all`
   💡 Improve commit quality: ensure future commits follow Conventional Commits standard
 ```
 
@@ -149,8 +183,6 @@ AI Action Recommendations:
 ---
 
 ### 2. 📝 Task Lifecycle Management (`devflow task`)
-
-_Create, list, inspect, complete, reopen, and delete tasks stored in `.devflow/devflow.db`._
 
 ```bash
 # Create a task
@@ -173,27 +205,9 @@ devflow task reopen TASK-001
 devflow task delete TASK-001 --yes
 ```
 
-<details>
-<summary><b>📸 View Sample Terminal Output</b></summary>
-
-```text
-Task Overview
-─────────────────────────
-ID          TASK-001
-Status      IN_PROGRESS
-Priority    HIGH
-Title       Implement user authentication
-Branch      feature/TASK-001-implement-user-authentication
-Created     2026-08-11T00:15:00.000Z
-```
-
-</details>
-
 ---
 
 ### 3. 🌿 Task-to-Branch Automation & Branch Control (`devflow start` & `devflow branch`)
-
-_Automatically create task branches, switch to them, list active branches, and cleanup merged work._
 
 ```bash
 # Start working on a task (creates branch feature/TASK-001-... & updates task status)
@@ -212,27 +226,9 @@ devflow branch cleanup --yes
 devflow branch delete feature/old-task --yes
 ```
 
-<details>
-<summary><b>📸 View Sample Terminal Output</b></summary>
-
-```text
-✓ TASK-001 started on feature/TASK-001-implement-user-authentication
-
-Local Branches
-─────────────────────────
-* feature/TASK-001-implement-user-authentication (TASK-001)
-  main
-  dev
-  qual
-```
-
-</details>
-
 ---
 
 ### 4. 📦 Conventional Commits, Safe Git & Stashing (`devflow commit`, `devflow git`, `devflow stash`)
-
-_Enforce Conventional Commit standards, execute safe Git operations, and manage local stashes._
 
 ```bash
 # Conventional Commit
@@ -263,50 +259,17 @@ devflow stash apply stash@{0}
 devflow stash drop stash@{0}
 ```
 
-<details>
-<summary><b>📸 View Sample Terminal Output</b></summary>
-
-```text
-✓ Created commit 7866791e feat(auth): add login endpoint
-
-Git Stashes
-─────────────────────────
-  stash@{0} WIP feature login
-```
-
-</details>
-
 ---
 
 ### 5. 🔄 1-Click Multi-Branch GitHub Sync (`devflow sync`)
-
-_Pushes all local feature, dev, qual, and main branches cleanly to GitHub._
 
 ```bash
 devflow sync
 ```
 
-<details>
-<summary><b>📸 View Sample Terminal Output</b></summary>
-
-```text
-DevFlow GitHub Sync
-───────────────────────────
-✓ Pushed 17 branches to GitHub remote
-ℹ Remote: https://github.com/Rageshwaran-HR/DEVFLOW.git
-  • dev
-  • feature/TASK-001-phase-1-project-setup
-  • main
-  • qual
-```
-
-</details>
-
 ---
 
 ### 6. 📑 Automated Conventional Changelog Generator (`devflow changelog`)
-
-_Generates a Markdown changelog grouped by conventional commit scopes._
 
 ```bash
 # Output changelog to terminal
@@ -316,31 +279,9 @@ devflow changelog
 devflow changelog --output CHANGELOG.md
 ```
 
-<details>
-<summary><b>📸 View Sample Terminal Output</b></summary>
-
-```text
-# Changelog
-
-Generated on 2026-08-11
-
-## Features
-
-- **auth**: add login API endpoint (`7866791`)
-- **ui**: add dark mode toggle (`5a29126`)
-
-## Documentation
-
-- **docs**: update API command reference (`c2ae519`)
-```
-
-</details>
-
 ---
 
 ### 7. 🐙 GitHub Integration: Issues, Pull Requests & Reviews (`devflow issue`, `devflow pr`, `devflow review`)
-
-_Sync local tasks with online GitHub Issues and Pull Requests._
 
 ```bash
 # Check GitHub Authentication Status
@@ -368,26 +309,9 @@ devflow review 42
 devflow review check 42
 ```
 
-<details>
-<summary><b>📸 View Sample Terminal Output</b></summary>
-
-```text
-Pull Request #42
-─────────────────────────
-Title       Implement user authentication
-State       open
-Head        feature/TASK-001-implement-user-authentication
-Base        main
-URL         https://github.com/Rageshwaran-HR/DEVFLOW/pull/42
-```
-
-</details>
-
 ---
 
 ### 8. 🎯 End-to-End Workflow Finish (`devflow finish`)
-
-_Validates working tree, commits, PR status, and completes task._
 
 ```bash
 # Guarded validation check before completion
@@ -397,24 +321,9 @@ devflow finish TASK-001
 devflow finish TASK-001 --merge --yes
 ```
 
-<details>
-<summary><b>📸 View Sample Terminal Output</b></summary>
-
-```text
-✓ Working tree clean
-✓ Branch verified
-✓ Pull Request #42 merged
-✓ Feature branch cleaned up
-✓ TASK-001 marked COMPLETED
-```
-
-</details>
-
 ---
 
 ### 9. 📊 Dashboard, Reports & Health Doctor (`devflow dashboard`, `devflow doctor`, `devflow report`)
-
-_Live terminal overview, diagnostic doctor, and markdown reports._
 
 ```bash
 # Interactive live dashboard & status
@@ -430,27 +339,9 @@ devflow report --output reports/summary.md
 devflow readme
 ```
 
-<details>
-<summary><b>📸 View Sample Terminal Output</b></summary>
-
-```text
-Repository Doctor
-─────────────────────────
-✓ Git repository           Repository detected
-✓ Remote                   https://github.com/Rageshwaran-HR/DEVFLOW.git
-✓ Current branch           main
-✓ README                   README.md present
-✓ .gitignore               .gitignore present
-✓ TypeScript configuration tsconfig.json present
-```
-
-</details>
-
 ---
 
 ### 10. ⚙️ Workflow Strategies & Configuration (`devflow workflow` & `devflow config`)
-
-_Manage branching strategies (`trunk` vs `gitflow`) and local configuration._
 
 ```bash
 # Workflow Strategy
@@ -464,24 +355,9 @@ devflow config get workflow.strategy
 devflow config set branch.prefix feature
 ```
 
-<details>
-<summary><b>📸 View Sample Terminal Output</b></summary>
-
-```text
-Configuration
-─────────────────────────
-workflow.strategy             trunk
-git.defaultBranch             main
-branch.prefix                 feature
-```
-
-</details>
-
 ---
 
 ### 11. 🚀 Repository Initialization (`devflow init`)
-
-_Initialize DevFlow SQLite database & Git repository inside any project._
 
 ```bash
 # Standard init
@@ -491,31 +367,14 @@ devflow init
 devflow init --yes
 ```
 
-<details>
-<summary><b>📸 View Sample Terminal Output</b></summary>
-
-```text
-DevFlow Initialization
-──────────────────────────────
-✓ Git repository detected
-✓ Remote detected
-✓ Database initialized
-
-Project: DEVFLOW
-Remote: https://github.com/Rageshwaran-HR/DEVFLOW.git
-Default branch: main
-
-✓ DevFlow initialized successfully.
-```
-
-</details>
-
 ---
 
 ## 🏗️ Architecture & Project Structure
 
 ```
 DevFlow/
+├── bin/              # Package binary entry points
+├── dist/             # Compiled JavaScript distribution
 ├── src/
 │   ├── ai.ts         # GitHub Copilot & AI Models inference engine
 │   ├── cli.ts        # Commander CLI registration & AI assistant orchestration
@@ -532,18 +391,50 @@ DevFlow/
 
 ---
 
-## 🧪 Development & Quality Commands
+## 🧪 Development & Testing Guide
+
+For contributors working on DevFlow locally:
 
 ```bash
-# Build TypeScript CLI
-npm run devflow:build
+# 1. Clone repository
+git clone https://github.com/Rageshwaran-HR/DEVFLOW.git
+cd DEVFLOW
 
-# Run Vitest Unit Tests
-npm run devflow:test
+# 2. Install dependencies
+npm install
 
-# Run ESLint Check
-npm run devflow:lint
+# 3. Build CLI
+npm run build
 
-# Format Codebase with Prettier
-npm run devflow:format
+# 4. Run Vitest Unit Tests
+npm test
+
+# 5. Run ESLint Check & Prettier Format
+npm run lint
+npm run format
+```
+
+---
+
+## 📦 Maintainer Publishing Guide
+
+Steps for package maintainers to inspect and publish releases:
+
+```bash
+# 1. Ensure clean build & passing tests
+npm run build
+npm test
+
+# 2. Test tarball contents without publishing
+npm pack --dry-run
+
+# 3. Generate npm tarball package
+npm pack
+
+# 4. Test tarball globally on a local machine
+npm install -g ./devflow-0.1.0.tgz
+
+# 5. Publish to npm registry (maintainers only)
+npm login
+npm publish --access public
 ```
