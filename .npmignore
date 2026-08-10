@@ -1,0 +1,26 @@
+# Development source files & configs
+src/
+tests/
+tsconfig*.json
+vitest.config.ts
+eslint.config.js
+
+# Local state, databases & secrets
+.devflow/
+*.db
+*.sqlite
+.env
+.env.*
+*.log
+audit-report.md
+
+# Package manager lockfiles & cache
+node_modules/
+.npm
+*.tgz
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
