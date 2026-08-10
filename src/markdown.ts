@@ -186,3 +186,74 @@ export function buildChangelog(
   }
   return lines.join("\n");
 }
+
+export function buildAiAuditReport(audit: {
+  score: number;
+  grade: string;
+  target: string;
+  summary: string;
+  strengths: string[];
+  issues: Array<{
+    type: string;
+    location: string;
+    message: string;
+    recommendation: string;
+  }>;
+  recommendations: string[];
+}): string {
+  const lines = [
+    `# DevFlow AI Quality & Risk Audit Report`,
+    "",
+    `**Target:** \`${audit.target}\`  `,
+    `**Date:** ${new Date().toISOString()}  `,
+    `**Quality Score:** \`${audit.score}/100\` (Grade **${audit.grade}**)`,
+    "",
+    "---",
+    "",
+    "## Executive Summary",
+    "",
+    audit.summary,
+    "",
+    "## ✖ Identified Failure Locations, Problem Files & Risks",
+    "",
+  ];
+
+  if (audit.issues.length === 0) {
+    lines.push("✓ No critical failures or code quality risks identified.");
+  } else {
+    lines.push(
+      "| Risk Type | Location | Problem Description | Recommended Action |",
+    );
+    lines.push("| :--- | :--- | :--- | :--- |");
+    for (const issue of audit.issues) {
+      const typeBadge = `\`${issue.type}\``;
+      const loc = issue.location.startsWith("file://")
+        ? `[\`${issue.location.replace("file://", "")}\`](${issue.location})`
+        : `\`${issue.location}\``;
+      const msg = issue.message.replace(/\|/g, "\\|");
+      const rec = issue.recommendation.replace(/\|/g, "\\|");
+      lines.push(`| ${typeBadge} | ${loc} | ${msg} | ${rec} |`);
+    }
+  }
+
+  lines.push("", "## ✓ Repository Strengths", "");
+  if (audit.strengths.length === 0) {
+    lines.push("- None recorded.");
+  } else {
+    for (const s of audit.strengths) {
+      lines.push(`- ${s}`);
+    }
+  }
+
+  lines.push("", "## 💡 AI Action Recommendations", "");
+  if (audit.recommendations.length === 0) {
+    lines.push("- None needed.");
+  } else {
+    for (const r of audit.recommendations) {
+      lines.push(`- ${r}`);
+    }
+  }
+
+  lines.push("");
+  return lines.join("\n");
+}
